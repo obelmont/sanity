@@ -6,7 +6,7 @@ type StreamResult = TransactionLogEvent | {error: {description?: string; type: s
 
 export async function getJsonStream(url: string): Promise<ReadableStream<StreamResult>> {
   const options: RequestInit = {credentials: 'include'}
-  const response =  await fetch(url, options)
+  const response = await fetch(url, options)
   return getStream(response)
 }
 

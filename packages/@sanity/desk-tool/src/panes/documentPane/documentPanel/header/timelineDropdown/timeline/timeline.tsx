@@ -1,16 +1,18 @@
 import React, {useCallback} from 'react'
 import {format} from 'date-fns'
-import {useDocumentHistory} from '../../../../documentHistory'
+import {useDocumentPane} from '../../../../use'
 
 import styles from './timeline.css'
 
 export function Timeline() {
-  const {historyDisplayed, startTime, timeline, toggleHistory} = useDocumentHistory()
+  const {historyDisplayed, startTime, timeline, toggleHistory} = useDocumentPane()
   const handleTimelineSelect = useCallback(time => toggleHistory(time), [toggleHistory])
 
   // @todo
   let isFirst = true
   let isSelected = false
+
+  if (!timeline) return null
 
   return (
     <div className={styles.root}>

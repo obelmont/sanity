@@ -1,4 +1,4 @@
-export {Doc} from '../../types'
+export {Doc} from '../types'
 
 export type MendozaPatch = unknown[]
 

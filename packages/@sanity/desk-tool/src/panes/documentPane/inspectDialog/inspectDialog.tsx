@@ -1,8 +1,4 @@
-/* eslint-disable @typescript-eslint/explicit-function-return-type */
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
-import PropTypes from 'prop-types'
-import React from 'react'
+import React, {useCallback} from 'react'
 import {combineLatest, Observable} from 'rxjs'
 import {map} from 'rxjs/operators'
 import JSONInspector from 'react-json-inspector'
@@ -15,6 +11,8 @@ import HLRU from 'hashlru'
 import {withPropsStream} from 'react-props-stream'
 import settings from '../../../settings'
 import DocTitle from '../../../components/DocTitle'
+import {Doc} from '../types'
+import {useDocumentPane} from '../use'
 
 import styles from './inspectDialog.css'
 
@@ -70,23 +68,20 @@ const VIEW_MODES = [VIEW_MODE_PARSED, VIEW_MODE_RAW]
 
 const viewModeSettings = settings.forKey('inspect-view-preferred-view-mode')
 
-function mapReceivedPropsToChildProps(props$: Observable<any>) {
-  const onViewModeChange = (nextViewMode: any) => viewModeSettings.set(nextViewMode.id)
-
-  const viewModeSetting$ = viewModeSettings
-    .listen('parsed')
-    .pipe(map((id: any) => VIEW_MODES.find(mode => mode.id === id)))
-
-  return combineLatest(props$, viewModeSetting$).pipe(
-    map(([props, viewMode]) => ({...props, viewMode, onViewModeChange}))
-  )
+interface Props {
+  idPrefix: string
+  onViewModeChange: any
+  value: any
+  viewMode: any
 }
 
-function InspectDialogComponent(props) {
-  const {idPrefix, onClose, onViewModeChange, value, viewMode} = props
-
+function InspectDialogComponent(props: Props) {
+  const {idPrefix, onViewModeChange, value, viewMode} = props
+  const {toggleInspect} = useDocumentPane()
   // @todo: prefix with pane id
   const tabIdPrefix = `${idPrefix}_inspect_`
+
+  const handleClose = useCallback(() => toggleInspect(false), [toggleInspect])
 
   return (
     <FullScreenDialog
@@ -99,7 +94,7 @@ function InspectDialogComponent(props) {
           </em>
         </span>
       }
-      onClose={onClose}
+      onClose={handleClose}
     >
       <div>
         <div className={styles.toolbar}>
@@ -151,21 +146,19 @@ function InspectDialogComponent(props) {
   )
 }
 
-InspectDialogComponent.propTypes = {
-  idPrefix: PropTypes.string.isRequired,
-  onClose: PropTypes.func,
-  onViewModeChange: PropTypes.func.isRequired,
-  // eslint-disable-next-line react/forbid-prop-types
-  value: PropTypes.object,
-  viewMode: PropTypes.shape({
-    id: PropTypes.string.isRequired,
-    title: PropTypes.string.isRequired
-  }).isRequired
-}
+export const InspectDialog = withPropsStream<{value: Doc}, Props>(
+  mapReceivedPropsToChildProps,
+  InspectDialogComponent
+)
 
-InspectDialogComponent.defaultProps = {
-  onClose: undefined,
-  value: undefined
-}
+function mapReceivedPropsToChildProps(props$: Observable<any>) {
+  const onViewModeChange = (nextViewMode: any) => viewModeSettings.set(nextViewMode.id)
 
-export const InspectDialog = withPropsStream(mapReceivedPropsToChildProps, InspectDialogComponent)
+  const viewModeSetting$ = viewModeSettings
+    .listen('parsed')
+    .pipe(map((id: any) => VIEW_MODES.find(mode => mode.id === id)))
+
+  return combineLatest(props$, viewModeSetting$).pipe(
+    map(([props, viewMode]) => ({...props, viewMode, onViewModeChange}))
+  )
+}

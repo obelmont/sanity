@@ -1,154 +1,117 @@
-/* eslint-disable @typescript-eslint/explicit-function-return-type */
-
-import React from 'react'
-import {Subscription} from 'rxjs'
+import {PresenceOverlay} from '@sanity/base/presence'
+import {useDocumentOperation} from '@sanity/react-hooks'
+import afterEditorComponents from 'all:part:@sanity/desk-tool/after-editor-component'
+import {setLocation} from 'part:@sanity/base/datastore/presence'
 import {isActionEnabled} from 'part:@sanity/base/util/document-action-utils'
 import Button from 'part:@sanity/components/buttons/default'
-import schema from 'part:@sanity/base/schema'
-import afterEditorComponents from 'all:part:@sanity/desk-tool/after-editor-component'
 import filterFieldFn$ from 'part:@sanity/desk-tool/filter-fields-fn?'
-import {setLocation} from 'part:@sanity/base/datastore/presence'
-import {PresenceOverlay} from '@sanity/base/presence'
-import {Doc} from '../../types'
+import React, {useCallback, useEffect, useState} from 'react'
+import {Subscription} from 'rxjs'
+import {useDocumentPane} from '../../use'
+import {useDocument} from '../../utils/document'
 import {EditForm} from './editForm'
 
 import styles from './formView.css'
 
 interface Props {
-  id: string
   readOnly?: boolean
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  value: Doc | null
-  initialValue: Doc
-  isConnected: boolean
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  onChange: (patches: any[]) => void
-  schemaType: {name: string; title: string}
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  markers: Array<{path: any[]}>
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  initialFocusPath: unknown[]
 }
 
 const noop = () => undefined
 
-const INITIAL_STATE = {
-  focusPath: [] as unknown[],
-  filterField: () => true
-}
+// eslint-disable-next-line complexity
+export function FormView(props: Props) {
+  const {readOnly} = props
+  const doc = useDocument()
+  const {connectionState, displayedValue, initialFocusPath, initialValue} = useDocumentPane()
+  const ops: any = useDocumentOperation(doc.id, doc.typeName)
+  const patch = ops && ops.patch
+  const onFieldChange = useCallback(patches => patch.execute(patches, initialValue), [patch])
+  const [focusPath, setFocusPath] = useState<any[]>([])
+  const [filterField, setFilterField] = useState<any>({fn: () => true})
+  const isConnected = connectionState === 'connected'
+  const isNonExistent = !displayedValue || !displayedValue._id
+  const isReadOnly =
+    !ops ||
+    readOnly ||
+    !isConnected ||
+    !isActionEnabled(doc.schemaType, 'update') ||
+    (isNonExistent && !isActionEnabled(doc.schemaType, 'create'))
+  const documentId =
+    displayedValue && displayedValue._id && displayedValue._id.replace(/^drafts\./, '')
+  const hasTypeMismatch =
+    displayedValue && displayedValue._type && displayedValue._type !== doc.schemaType.name
 
-export class FormView extends React.PureComponent<Props> {
-  static defaultProps = {
-    markers: [],
-    isConnected: true
-  }
+  const reportFocusPath = useCallback(
+    path => {
+      setLocation([
+        {
+          type: 'document',
+          documentId: doc.id,
+          path,
+          lastActiveAt: new Date().toISOString()
+        }
+      ])
+    },
+    [doc.id]
+  )
 
-  state = INITIAL_STATE
+  const handleBlur = useCallback(() => {
+    // do nothing
+  }, [])
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  filterFieldFnSubscription: Subscription | null = null
+  const handleEditAsActualType = useCallback(() => {
+    // TODO
+  }, [])
 
-  componentDidMount() {
-    const {initialFocusPath} = this.props
+  useEffect(() => {
     if (initialFocusPath) {
-      this.setState({
-        focusPath: initialFocusPath
-      })
-      this.reportFocusPath(initialFocusPath)
+      setFocusPath(initialFocusPath)
+      reportFocusPath(initialFocusPath)
     }
+
+    let filterFieldFnSubscription: Subscription | null = null
 
     if (filterFieldFn$) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      this.filterFieldFnSubscription = filterFieldFn$.subscribe((filterField: any) =>
-        this.setState({filterField})
-      )
+      filterFieldFnSubscription = filterFieldFn$.subscribe(fn => setFilterField({fn}))
     }
-  }
 
-  componentWillUnmount() {
-    if (this.filterFieldFnSubscription) {
-      this.filterFieldFnSubscription.unsubscribe()
-    }
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  handleFocus = (path: any[]) => {
-    this.setState({focusPath: path})
-  }
-
-  reportFocusPath(path) {
-    setLocation([
-      {
-        type: 'document',
-        documentId: this.props.id,
-        path,
-        lastActiveAt: new Date().toISOString()
+    return () => {
+      if (filterFieldFnSubscription) {
+        filterFieldFnSubscription.unsubscribe()
       }
-    ])
-  }
-
-  handleBlur = () => {
-    // do nothing
-  }
-
-  handleEditAsActualType = () => {
-    // TODO
-  }
-
-  isReadOnly() {
-    const {value, schemaType, isConnected, readOnly} = this.props
-    const isNonExistent = !value || !value._id
-
-    return (
-      readOnly ||
-      !isConnected ||
-      !isActionEnabled(schemaType, 'update') ||
-      (isNonExistent && !isActionEnabled(schemaType, 'create'))
-    )
-  }
-
-  render() {
-    const {id, value, initialValue, markers, schemaType} = this.props
-    const {focusPath, filterField} = this.state
-    const readOnly = this.isReadOnly()
-    const documentId = value && value._id && value._id.replace(/^drafts\./, '')
-
-    const hasTypeMismatch = value && value._type && value._type !== schemaType.name
-    if (hasTypeMismatch) {
-      return (
-        <div className={styles.typeMisMatchMessage}>
-          This document is of type <code>{value!._type}</code> and cannot be edited as{' '}
-          <code>{schemaType.name}</code>
-          <div>
-            <Button onClick={this.handleEditAsActualType}>Edit as {value!._type} instead</Button>
-          </div>
-        </div>
-      )
     }
+  }, [])
 
+  if (hasTypeMismatch) {
     return (
-      <div className={styles.root}>
-        <PresenceOverlay>
-          <EditForm
-            id={id}
-            value={value || initialValue}
-            filterField={filterField}
-            focusPath={focusPath}
-            markers={markers}
-            onBlur={this.handleBlur}
-            onChange={readOnly ? noop : this.props.onChange}
-            onFocus={this.handleFocus}
-            readOnly={readOnly}
-            schema={schema}
-            type={schemaType}
-          />
-        </PresenceOverlay>
-
-        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-        {afterEditorComponents.map((AfterEditorComponent: any, idx: number) => (
-          <AfterEditorComponent key={String(idx)} documentId={documentId} />
-        ))}
+      <div className={styles.typeMisMatchMessage}>
+        This document is of type <code>{displayedValue!._type}</code> and cannot be edited as{' '}
+        <code>{doc.schemaType.name}</code>
+        <div>
+          <Button onClick={handleEditAsActualType}>Edit as {displayedValue!._type} instead</Button>
+        </div>
       </div>
     )
   }
+
+  return (
+    <div className={styles.root}>
+      <PresenceOverlay>
+        <EditForm
+          value={displayedValue || initialValue}
+          filterField={filterField.fn}
+          focusPath={focusPath}
+          onBlur={handleBlur}
+          onChange={readOnly ? noop : onFieldChange}
+          onFocus={setFocusPath}
+          readOnly={isReadOnly}
+        />
+      </PresenceOverlay>
+
+      {afterEditorComponents.map((AfterEditorComponent: any, idx: number) => (
+        <AfterEditorComponent key={String(idx)} documentId={documentId} />
+      ))}
+    </div>
+  )
 }

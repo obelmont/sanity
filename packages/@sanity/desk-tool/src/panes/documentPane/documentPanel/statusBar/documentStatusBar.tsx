@@ -2,27 +2,26 @@
 
 import React, {useCallback} from 'react'
 import TimeAgo from '../../../../components/TimeAgo'
-import {useDocumentHistory} from '../../documentHistory'
-import styles from './documentStatusBar.css'
+import {useDocumentPane} from '../../use'
 import {DocumentStatusBarActions} from './documentStatusBarActions'
 import {DocumentStatusBarBadges} from './documentStatusBarBadges'
 import {SyncState} from './syncState'
 
+import styles from './documentStatusBar.css'
+
 interface Props {
-  id: string
-  type: string
   lastUpdated?: string
 }
 
 export function DocumentStatusBar(props: Props) {
-  const {toggleHistory} = useDocumentHistory()
+  const {toggleHistory} = useDocumentPane()
   const handleToggleHistory = useCallback(() => toggleHistory('-'), [toggleHistory])
 
   return (
     <div className={styles.root}>
       <div className={styles.status}>
         <div className={styles.statusBadgesContainer}>
-          <DocumentStatusBarBadges id={props.id} type={props.type} />
+          <DocumentStatusBarBadges />
         </div>
         <div className={styles.statusDetails}>
           <button className={styles.lastUpdatedButton} onClick={handleToggleHistory} type="button">
@@ -34,12 +33,12 @@ export function DocumentStatusBar(props: Props) {
               'Empty'
             )}
           </button>
-          <SyncState id={props.id} type={props.type} />
+          <SyncState />
         </div>
       </div>
       <div className={styles.actions}>
         <div className={styles.actionsWrapper}>
-          <DocumentStatusBarActions id={props.id} type={props.type} />
+          <DocumentStatusBarActions />
         </div>
       </div>
     </div>

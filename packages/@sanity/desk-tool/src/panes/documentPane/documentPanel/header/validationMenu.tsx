@@ -3,18 +3,20 @@ import ValidationList from 'part:@sanity/components/validation/list'
 import ErrorOutlineIcon from 'part:@sanity/base/error-outline-icon'
 import React from 'react'
 import {Tooltip} from 'react-tippy'
+import {useDocument} from '../../utils/document'
+import {useDocumentPane} from '../../use'
 
 interface ValidationMenuProps {
   isOpen: boolean
-  markers: any[]
   onClose: () => void
   onToggle: () => void
-  schemaType: any
   setFocusPath: (path: any) => void
 }
 
 export function ValidationMenu(props: ValidationMenuProps) {
-  const {isOpen, markers, onClose, onToggle, schemaType, setFocusPath} = props
+  const {isOpen, onClose, onToggle, setFocusPath} = props
+  const {markers} = useDocumentPane()
+  const doc = useDocument()
   const validationMarkers = markers.filter(marker => marker.type === 'validation')
   const validationErrorMarkers = validationMarkers.filter(marker => marker.level === 'error')
   const validationWarningwarnings = validationMarkers.filter(marker => marker.level === 'warning')
@@ -29,7 +31,7 @@ export function ValidationMenu(props: ValidationMenuProps) {
       distance={13}
       html={
         <ValidationList
-          documentType={schemaType}
+          documentType={doc.schemaType}
           markers={validationMarkers}
           isOpen={isOpen}
           onClose={onClose}

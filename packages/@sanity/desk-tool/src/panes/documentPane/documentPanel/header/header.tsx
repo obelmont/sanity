@@ -4,7 +4,8 @@ import CloseIcon from 'part:@sanity/base/close-icon'
 import SplitHorizontalIcon from 'part:@sanity/base/split-horizontal-icon'
 import LanguageFilter from 'part:@sanity/desk-tool/language-select-component?'
 import React, {useCallback, useState} from 'react'
-import {DocumentView, MenuAction, MenuItemGroup} from '../../types'
+import {DocumentView, MenuAction} from '../../types'
+import {useDocumentPane} from '../../use'
 import {DocumentPanelContextMenu} from './contextMenu'
 import {DocumentHeaderTabs} from './tabs'
 import {TimelineDropdown} from './timelineDropdown'
@@ -14,19 +15,8 @@ import styles from './header.css'
 
 export interface DocumentPanelHeaderProps {
   activeViewId?: string
-  idPrefix: string
-  isClosable: boolean
-  isCollapsed: boolean
-  markers: any
   menuItems: MenuAction[]
-  menuItemGroups: MenuItemGroup[]
-  onCloseView: () => void
   onContextMenuAction: (action: MenuAction) => void
-  onCollapse?: () => void
-  onExpand?: () => void
-  onSetActiveView: (id: string | null) => void
-  onSplitPane: () => void
-  schemaType: any
   setFocusPath: (path: any) => void
   title: React.ReactNode
   views: DocumentView[]
@@ -36,7 +26,9 @@ const isActionButton = (item: MenuAction) => (item as any).showAsAction
 const isMenuButton = negate(isActionButton)
 
 export function DocumentPanelHeader(props: DocumentPanelHeaderProps) {
-  const contextMenuItems = props.menuItems.filter(isMenuButton)
+  const {activeViewId, menuItems, onContextMenuAction, setFocusPath, title, views} = props
+  const {closePane, isClosable, isCollapsed, onCollapse, onExpand, splitPane} = useDocumentPane()
+  const contextMenuItems = menuItems.filter(isMenuButton)
   const [isContextMenuOpen, setContextMenuOpen] = useState(false)
   const [isVersionSelectOpen, setVersionSelectOpen] = useState(false)
   const [isValidationOpen, setValidationOpen] = React.useState<boolean>(false)
@@ -62,36 +54,32 @@ export function DocumentPanelHeader(props: DocumentPanelHeaderProps) {
   }, [isValidationOpen])
 
   const handleTitleClick = useCallback(() => {
-    if (props.isCollapsed && props.onExpand) props.onExpand()
-    if (!props.isCollapsed && props.onCollapse) props.onCollapse()
-  }, [props.isCollapsed, props.onExpand, props.onCollapse])
+    if (isCollapsed) onExpand()
+    if (!isCollapsed) onCollapse()
+  }, [isCollapsed, onExpand, onCollapse])
 
   return (
-    <div className={classNames(styles.root, props.isCollapsed && styles.isCollapsed)}>
+    <div className={classNames(styles.root, isCollapsed && styles.isCollapsed)}>
       <div className={styles.mainNav}>
         <div className={styles.title} onClick={handleTitleClick}>
-          <strong>{props.title}</strong>
+          <strong>{title}</strong>
         </div>
 
         <div className={styles.paneFunctions}>
           {LanguageFilter && <LanguageFilter />}
           <ValidationMenu
             isOpen={isValidationOpen}
-            markers={props.markers}
             onClose={handleCloseValidationResults}
             onToggle={handleToggleValidationResults}
-            schemaType={props.schemaType}
-            setFocusPath={props.setFocusPath}
+            setFocusPath={setFocusPath}
           />
         </div>
 
         <div className={styles.contextMenuContainer}>
           <DocumentPanelContextMenu
-            isCollapsed={props.isCollapsed}
             isOpen={isContextMenuOpen}
-            itemGroups={props.menuItemGroups}
             items={contextMenuItems}
-            onAction={props.onContextMenuAction}
+            onAction={onContextMenuAction}
             onCloseMenu={handleCloseContextMenu}
             onToggleMenu={handleToggleContextMenu}
           />
@@ -99,14 +87,9 @@ export function DocumentPanelHeader(props: DocumentPanelHeaderProps) {
       </div>
 
       <div className={styles.viewNav}>
-        {props.views.length > 1 && (
+        {views.length > 1 && (
           <div className={styles.tabsContainer}>
-            <DocumentHeaderTabs
-              activeViewId={props.activeViewId}
-              idPrefix={props.idPrefix}
-              onSetActiveView={props.onSetActiveView}
-              views={props.views}
-            />
+            <DocumentHeaderTabs activeViewId={activeViewId} views={views} />
           </div>
         )}
 
@@ -122,16 +105,16 @@ export function DocumentPanelHeader(props: DocumentPanelHeaderProps) {
         </div>
 
         <div className={styles.viewActions}>
-          {props.onSplitPane && props.views.length > 1 && (
-            <button type="button" onClick={props.onSplitPane} title="Split pane right">
+          {splitPane && views.length > 1 && (
+            <button type="button" onClick={splitPane} title="Split pane right">
               <div tabIndex={-1}>
                 <SplitHorizontalIcon />
               </div>
             </button>
           )}
 
-          {props.onSplitPane && props.isClosable && (
-            <button type="button" onClick={props.onCloseView} title="Close pane">
+          {splitPane && isClosable && (
+            <button type="button" onClick={closePane} title="Close pane">
               <div tabIndex={-1}>
                 <CloseIcon />
               </div>

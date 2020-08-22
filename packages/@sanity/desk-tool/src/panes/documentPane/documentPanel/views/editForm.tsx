@@ -1,42 +1,39 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import {useDocumentPresence} from '@sanity/base/hooks'
+import schema from 'part:@sanity/base/schema'
 import {FormBuilder} from 'part:@sanity/form-builder'
 import documentStore from 'part:@sanity/base/datastore/document'
 import React, {FormEvent, useEffect, useMemo, useRef, memo} from 'react'
 import {Subscription} from 'rxjs'
 import {tap} from 'rxjs/operators'
+import {useDocument} from '../../utils/document'
+import {useDocumentPane} from '../../use'
+import {Doc} from '../../types'
 
 const preventDefault = (ev: FormEvent) => ev.preventDefault()
 
-type Doc = any
-type Schema = any
-type SchemaType = any
-
 interface Props {
-  id: string
-  value: Doc
-
   filterField: () => boolean
   focusPath: any[]
-  markers: any[]
-
   onBlur: () => void
   onChange: (event: any) => void
   onFocus: (focusPath: any[]) => void
   readOnly: boolean
-  schema: Schema
-  type: SchemaType
+  value: Doc
 }
 
 export const EditForm = memo((props: Props) => {
-  const presence = useDocumentPresence(props.id)
+  const {filterField, focusPath, onBlur, onFocus, onChange, readOnly, value} = props
+  const doc = useDocument()
+  const {markers} = useDocumentPane()
+  const presence = useDocumentPresence(doc.id)
   const subscriptionRef = useRef<Subscription | null>(null)
   const patchChannel = useMemo(() => FormBuilder.createPatchChannel(), [])
 
   useEffect(() => {
     subscriptionRef.current = documentStore.pair
-      .documentEvents(props.id, props.type.name)
+      .documentEvents(doc.id, doc.typeName)
       .pipe(
         tap((event: any) => {
           patchChannel.receiveEvent(event)
@@ -52,26 +49,13 @@ export const EditForm = memo((props: Props) => {
     }
   }, [])
 
-  const {
-    filterField,
-    focusPath,
-    markers,
-    value,
-    onBlur,
-    onFocus,
-    onChange,
-    readOnly,
-    schema,
-    type
-  } = props
-
   return (
     <form onSubmit={preventDefault}>
       <FormBuilder
         schema={schema}
         patchChannel={patchChannel}
-        value={value || {_type: type}}
-        type={type}
+        value={value || {_type: doc.schemaType}}
+        type={doc.schemaType}
         presence={presence}
         filterField={filterField}
         readOnly={readOnly}

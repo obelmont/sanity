@@ -9,8 +9,9 @@ import {useEditState} from '@sanity/react-hooks'
 import resolveDocumentActions from 'part:@sanity/base/document-actions/resolver'
 import isHotkey from 'is-hotkey'
 import {ActionStateDialog} from '../documentPanel/statusBar'
+import {useDocument} from '../utils/document'
 
-interface ResponderProps extends React.ComponentProps<'div'> {
+interface ResponderProps {
   states: any[]
   activeIndex: number
   onActionStart: (index: number) => void
@@ -23,7 +24,7 @@ function KeyboardShortcutResponder({
   activeIndex,
   onActionStart,
   ...rest
-}: ResponderProps) {
+}: React.HTMLProps<HTMLDivElement> & ResponderProps) {
   const active = states[activeIndex]
 
   const handleKeyDown = React.useCallback(
@@ -58,22 +59,12 @@ function KeyboardShortcutResponder({
   )
 }
 
-interface Props extends React.ComponentProps<'div'> {
-  id: string
-  type: string
-}
-
-export const DocumentActionShortcuts = React.memo((props: Props) => {
-  const {id, type, children, ...rest} = props
-
-  const editState = useEditState(props.id, props.type)
-
+export const DocumentActionShortcuts = React.memo((props: React.HTMLProps<HTMLDivElement>) => {
+  const {children, ...rest} = props
+  const doc = useDocument()
+  const editState = useEditState(doc.id, doc.typeName)
   const [activeIndex, setActiveIndex] = React.useState(-1)
-
-  const onActionStart = React.useCallback(idx => {
-    setActiveIndex(idx)
-  }, [])
-
+  const onActionStart = React.useCallback(idx => setActiveIndex(idx), [])
   const actions = editState ? resolveDocumentActions(editState) : null
 
   return actions ? (

@@ -1,13 +1,9 @@
-/* eslint-disable @typescript-eslint/explicit-function-return-type */
-/* eslint-disable react/no-multi-comp */
-/* eslint-disable react/no-array-index-key */
-
 import {useEditState} from '@sanity/react-hooks'
 import React from 'react'
 import Badge from 'part:@sanity/components/badges/default'
-
 import resolveDocumentBadges from 'part:@sanity/base/document-badges/resolver'
 import {RenderBadgeCollectionState} from 'part:@sanity/base/actions/utils'
+import {useDocument} from '../../utils/document'
 
 import styles from './documentStatusBarBadges.css'
 
@@ -38,9 +34,9 @@ function DocumentStatusBarBadgesInner(props: Props) {
   )
 }
 
-export function DocumentStatusBarBadges(props: {id: string; type: string}) {
-  const editState = useEditState(props.id, props.type)
-
+export function DocumentStatusBarBadges() {
+  const doc = useDocument()
+  const editState = useEditState(doc.id, doc.typeName)
   const badges = editState ? resolveDocumentBadges(editState) : null
 
   return badges ? (

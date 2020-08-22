@@ -1,1 +1,1 @@
-export * from './documentPaneProvider'
+export * from './documentPane'

@@ -1,10 +1,11 @@
 /* eslint-disable max-depth */
-import React, {useCallback, Fragment, useContext} from 'react'
+import React, {useCallback, Fragment} from 'react'
 import {useDocumentOperation} from '@sanity/react-hooks'
-import {ObjectDiff, SchemaType, ObjectSchemaType, ArrayDiff} from '@sanity/field/diff'
+import {ObjectDiff, ObjectSchemaType, ArrayDiff} from '@sanity/field/diff'
 import {FallbackDiff} from '../../../diffs/_fallback/FallbackDiff'
 import {resolveDiffComponent} from '../../../diffs/resolveDiffComponent'
-import {useDocumentHistory} from '../documentHistory'
+import {useDocumentPane} from '../use'
+import {useDocument} from '../utils/document'
 import {buildChangeList} from './buildChangeList'
 import {DiffErrorBoundary} from './diffErrorBoundary'
 import {OperationsAPI, ChangeNode, ArrayChangeNode, FieldChangeNode, GroupChangeNode} from './types'
@@ -12,28 +13,16 @@ import {undoChange} from './undoChange'
 
 import styles from './changesPanel.css'
 
-interface ChangesPanelProps {
-  documentId: string
-  schemaType: ObjectSchemaType
-}
+export function ChangesPanel() {
+  const doc = useDocument()
+  const {closeHistory, timeline} = useDocumentPane()
+  const diff: ObjectDiff | null = timeline && (timeline.currentDiff() as any)
 
-type DocumentContextProps = {
-  documentId: string
-  schemaType: SchemaType
-}
-
-const DocumentContext = React.createContext<DocumentContextProps>({} as any)
-
-export function ChangesPanel({documentId, schemaType}: ChangesPanelProps) {
-  const {closeHistory, timeline} = useDocumentHistory()
-  const diff: ObjectDiff = timeline.currentDiff() as any
-
-  if (diff.type !== 'object') {
+  if (!diff || diff.type !== 'object') {
     return null
   }
 
-  const documentContext = {documentId, schemaType}
-  const changes = buildChangeList(schemaType, diff)
+  const changes = buildChangeList(doc.schemaType as ObjectSchemaType, diff)
   return (
     <div className={styles.root}>
       <header className={styles.header}>
@@ -53,13 +42,11 @@ export function ChangesPanel({documentId, schemaType}: ChangesPanelProps) {
       </header>
 
       <div className={styles.body}>
-        <DocumentContext.Provider value={documentContext}>
-          <div className={styles.changeList}>
-            {changes.map(change => (
-              <ChangeResolver change={change} key={change.key} level={0} />
-            ))}
-          </div>
-        </DocumentContext.Provider>
+        <div className={styles.changeList}>
+          {changes.map(change => (
+            <ChangeResolver change={change} key={change.key} level={0} />
+          ))}
+        </div>
       </div>
     </div>
   )
@@ -67,10 +54,10 @@ export function ChangesPanel({documentId, schemaType}: ChangesPanelProps) {
 
 function ArrayChange({change, level = 0}: {change: ArrayChangeNode; level: number}) {
   const DiffComponent = resolveDiffComponent<ArrayDiff>(change.schemaType) || FallbackDiff
-  const {documentId, schemaType} = useContext(DocumentContext)
-  const docOperations = useDocumentOperation(documentId, schemaType.name) as OperationsAPI
+  const doc = useDocument()
+  const docOperations = useDocumentOperation(doc.id, doc.typeName) as OperationsAPI
   const handleUndoChange = useCallback(() => undoChange(change.diff, change.path, docOperations), [
-    documentId,
+    doc.id,
     change.key,
     change.diff
   ])
@@ -101,10 +88,10 @@ function ArrayChange({change, level = 0}: {change: ArrayChangeNode; level: numbe
 
 function FieldChange({change, level = 0}: {change: FieldChangeNode; level: number}) {
   const DiffComponent = resolveDiffComponent(change.schemaType) || FallbackDiff
-  const {documentId, schemaType} = useContext(DocumentContext)
-  const docOperations = useDocumentOperation(documentId, schemaType.name) as OperationsAPI
+  const doc = useDocument()
+  const docOperations = useDocumentOperation(doc.id, doc.typeName) as OperationsAPI
   const handleUndoChange = useCallback(() => undoChange(change.diff, change.path, docOperations), [
-    documentId,
+    doc.id,
     change.key,
     change.diff
   ])

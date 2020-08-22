@@ -1,5 +1,7 @@
 {
   "rules": {
+    "@typescript-eslint/no-non-null-assertion": "off",
+    "id-length": "off",
     "react/jsx-handler-names": "off",
     "react/require-default-props": "off"
   }

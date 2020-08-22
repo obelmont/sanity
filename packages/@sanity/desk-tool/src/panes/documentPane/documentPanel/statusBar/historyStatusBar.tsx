@@ -1,17 +1,10 @@
-/* eslint-disable @typescript-eslint/explicit-function-return-type */
-
 import React from 'react'
 import TimeAgo from '../../../../components/TimeAgo'
 import {HistoryStatusBarActions} from './documentStatusBarActions'
 
 import styles from './documentStatusBar.css'
 
-interface Props {
-  id: string
-  type: string
-}
-
-export function HistoryStatusBar(props: Props) {
+export function HistoryStatusBar() {
   return (
     <div className={styles.root}>
       <div className={styles.status}>
@@ -20,9 +13,10 @@ export function HistoryStatusBar(props: Props) {
           (latest)
         </div>
       </div>
+
       <div className={styles.actions}>
         <div className={styles.actionsWrapper}>
-          <HistoryStatusBarActions id={props.id} type={props.type} revision={'TODO'} />
+          <HistoryStatusBarActions revision={'TODO'} />
         </div>
       </div>
     </div>

@@ -1,29 +1,22 @@
 import * as React from 'react'
-import schema from 'part:@sanity/base/schema'
 import {PreviewFields} from 'part:@sanity/base/preview'
-import {Doc} from '../../types'
+import {useDocument} from '../../utils/document'
+import {useDocumentPane} from '../../use'
 
-export function DocumentHeaderTitle({
-  documentType,
-  paneTitle,
-  value
-}: {
-  documentType: string
-  paneTitle?: string
-  value: Doc | null
-}) {
-  const type = schema.get(documentType)
+export function DocumentHeaderTitle() {
+  const {schemaType} = useDocument()
+  const {currentValue, paneTitle} = useDocumentPane()
 
   if (paneTitle) {
     return <span>{paneTitle}</span>
   }
 
-  if (!value) {
-    return <>New {type.title || type.name}</>
+  if (!currentValue) {
+    return <>New {schemaType.title || schemaType.name}</>
   }
 
   return (
-    <PreviewFields document={value} type={type} fields={['title']}>
+    <PreviewFields document={currentValue} type={schemaType} fields={['title']}>
       {({title}) => (title ? <span>{title}</span> : <em>Untitled</em>)}
     </PreviewFields>
   )

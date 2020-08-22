@@ -14,6 +14,9 @@
   padding: 1em;
   line-height: 17px;
   cursor: default;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 
   @nest .isCollapsed & {
     transform: rotate(90deg);
@@ -23,7 +26,8 @@
 }
 
 .paneFunctions {
-  padding: 8px;
+  padding: 8px 0;
+  margin-left: auto;
 
   @nest .isCollapsed & {
     display: none;
@@ -31,7 +35,7 @@
 }
 
 .contextMenuContainer {
-  padding: 8px;
+  padding: 8px 0;
 
   @nest .isCollapsed & {
     display: none;

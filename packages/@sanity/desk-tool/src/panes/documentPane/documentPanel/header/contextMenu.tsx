@@ -3,22 +3,22 @@ import Button from 'part:@sanity/components/buttons/default'
 import Menu from 'part:@sanity/components/menus/default'
 import React, {useMemo} from 'react'
 import {Tooltip} from 'react-tippy'
-import {MenuAction, MenuItemGroup} from '../../types'
+import {MenuAction} from '../../types'
 
+import {useDocumentPane} from '../../use'
 import styles from './contextMenu.css'
 
 interface DocumentPanelContextMenuProps {
-  isCollapsed: boolean
   isOpen: boolean
   items: MenuAction[]
-  itemGroups: MenuItemGroup[]
   onAction: (action: MenuAction) => void
   onCloseMenu: () => void
   onToggleMenu: () => void
 }
 
 export function DocumentPanelContextMenu(props: DocumentPanelContextMenuProps) {
-  const {isCollapsed, isOpen, items, itemGroups, onAction, onCloseMenu, onToggleMenu} = props
+  const {isOpen, items, onAction, onCloseMenu, onToggleMenu} = props
+  const {isCollapsed, menuItemGroups: itemGroups} = useDocumentPane()
 
   const id = useMemo(
     () =>

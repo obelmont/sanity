@@ -1,8 +1,9 @@
 import classNames from 'classnames'
 import Snackbar from 'part:@sanity/components/snackbar/default'
 import React, {createElement, useCallback, useMemo, useRef} from 'react'
-import {useDocumentHistory} from '../documentHistory'
-import {Doc, DocumentView, MenuItemGroup} from '../types'
+import {usePaneRouter} from '../../../contexts/PaneRouterContext'
+import {useDocumentPane} from '../use'
+import {useDocument} from '../utils/document'
 import {DocumentOperationResults} from './documentOperationResults'
 import {DocumentHeaderTitle} from './header/title'
 import {DocumentPanelHeader} from './header/header'
@@ -13,50 +14,40 @@ import {DocumentStatusBar} from './statusBar'
 import styles from './documentPanel.css'
 
 interface DocumentPanelProps {
-  activeViewId: string
-  connectionState: string
-  documentId: string
-  documentType: string
-  idPrefix: string
-  initialFocusPath: any[]
-  initialValue: Doc
-  isClosable: boolean
-  isCollapsed: boolean
   isHistoryOpen: boolean
-  markers: any
-  menuItemGroups: MenuItemGroup[]
-  onChange: (patches: any[]) => void
-  onCloseView: () => void
-  onCollapse?: () => void
-  onExpand?: () => void
-  onSetActiveView: (id: string | null) => void
-  onSplitPane: () => void
-  paneTitle?: string
-  schemaType: any
-  toggleInspect: (val: boolean) => void
-  value: any
-  views: DocumentView[]
 }
 
+// eslint-disable-next-line complexity
 export function DocumentPanel(props: DocumentPanelProps) {
-  const {displayed, historyDisplayed, startTime, toggleHistory} = useDocumentHistory()
-  const {toggleInspect} = props
+  const {isHistoryOpen} = props
+  const {
+    connectionState,
+    currentValue,
+    historyDisplayed,
+    isCollapsed,
+    startTime,
+    toggleHistory,
+    toggleInspect,
+    views
+  } = useDocumentPane()
+  const doc = useDocument()
+  const paneRouter = usePaneRouter()
+  const activeViewId = paneRouter.params.view || (views[0] && views[0].id)
   const formRef = useRef<any>()
-  const activeView = props.views.find(view => view.id === props.activeViewId) ||
-    props.views[0] || {type: 'form'}
+  const activeView = views.find(view => view.id === activeViewId) || views[0] || {type: 'form'}
 
   const menuItems = useMemo(() => {
     return (
       getMenuItems({
         canShowHistoryList: true,
         isHistoryEnabled: true,
-        isHistoryOpen: props.isHistoryOpen,
-        isLiveEditEnabled: props.schemaType.liveEdit === true,
+        isHistoryOpen,
+        isLiveEditEnabled: doc.schemaType.liveEdit === true,
         rev: startTime ? startTime.chunk.id : null,
-        value: props.value
+        value: currentValue
       }) || []
     )
-  }, [props.isHistoryOpen, props.schemaType, startTime, props.value])
+  }, [isHistoryOpen, doc.schemaType, startTime, currentValue])
 
   const handleContextMenuAction = useCallback(
     item => {
@@ -90,75 +81,44 @@ export function DocumentPanel(props: DocumentPanelProps) {
   )
 
   return (
-    <div className={classNames(styles.root, props.isCollapsed && styles.isCollapsed)}>
+    <div className={classNames(styles.root, isCollapsed && styles.isCollapsed)}>
       <div className={styles.headerContainer}>
         <DocumentPanelHeader
-          activeViewId={props.activeViewId}
-          idPrefix={props.idPrefix}
-          isClosable={props.isClosable}
-          isCollapsed={props.isCollapsed}
-          markers={props.markers}
-          menuItemGroups={props.menuItemGroups}
+          activeViewId={activeViewId}
           menuItems={menuItems}
-          onCloseView={props.onCloseView}
-          onCollapse={props.onCollapse}
           onContextMenuAction={handleContextMenuAction}
-          onExpand={props.onExpand}
-          onSetActiveView={props.onSetActiveView}
-          onSplitPane={props.onSplitPane}
-          schemaType={props.schemaType}
           setFocusPath={setFocusPath}
-          title={
-            <DocumentHeaderTitle
-              documentType={props.documentType}
-              paneTitle={props.paneTitle}
-              value={props.value}
-            />
-          }
-          views={props.views}
+          title={<DocumentHeaderTitle />}
+          views={views}
         />
       </div>
 
       <div className={styles.documentViewerContainer}>
         {activeView.type === 'form' && (
           <FormView
-            id={props.documentId}
-            initialFocusPath={props.initialFocusPath}
-            initialValue={props.initialValue}
-            markers={props.markers}
-            onChange={props.onChange}
             readOnly={historyDisplayed === 'from'}
-            ref={formRef}
-            schemaType={props.schemaType}
-            value={displayed}
+            // @todo
+            // ref={formRef}
           />
         )}
 
         {activeView.type === 'component' &&
           createElement(activeView.component, {
-            documentId: props.documentId,
+            documentId: doc.id,
             options: activeView.options,
-            schemaType: props.schemaType
+            schemaType: doc.schemaType
           })}
       </div>
 
       <div className={styles.footerContainer}>
-        <DocumentStatusBar
-          id={props.documentId}
-          type={props.documentType}
-          lastUpdated={props.value && props.value._updatedAt}
-        />
+        <DocumentStatusBar lastUpdated={currentValue._updatedAt} />
       </div>
 
-      {props.connectionState === 'reconnecting' && (
+      {connectionState === 'reconnecting' && (
         <Snackbar kind="warning" isPersisted title="Connection lost. Reconnecting…" />
       )}
 
-      <DocumentOperationResults id={props.documentId} type={props.documentType} />
+      <DocumentOperationResults />
     </div>
   )
-}
-
-DocumentPanel.defaultProps = {
-  paneTitle: undefined
 }

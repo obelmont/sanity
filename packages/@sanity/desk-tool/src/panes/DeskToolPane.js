@@ -6,14 +6,14 @@ import {noop} from 'lodash'
 import {DocumentsListPane} from './documentsListPane'
 import {UserComponentPane} from './userComponentPane'
 import {UnknownPane} from './unknownPane'
-import {DocumentPaneProvider} from './documentPane'
+import {DocumentPane} from './documentPane'
 import {ListPane} from './listPane'
 
 const paneMap = {
-  list: ListPane,
+  component: UserComponentPane,
+  document: DocumentPane,
   documentList: DocumentsListPane,
-  document: DocumentPaneProvider,
-  component: UserComponentPane
+  list: ListPane
 }
 
 // eslint-disable-next-line react/prefer-stateless-function

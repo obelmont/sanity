@@ -3,16 +3,13 @@ import Tab from 'part:@sanity/components/tabs/tab'
 import TabList from 'part:@sanity/components/tabs/tab-list'
 import {DocumentView} from '../../types'
 
+import {useDocumentPane} from '../../use'
 import styles from './tabs.css'
 
-export function DocumentHeaderTabs(props: {
-  activeViewId?: string
-  idPrefix: string
-  onSetActiveView: (id: string | null) => void
-  views?: DocumentView[]
-}) {
-  const {activeViewId, idPrefix, onSetActiveView, views = []} = props
-  const tabPanelId = `${idPrefix}tabpanel`
+export function DocumentHeaderTabs(props: {activeViewId?: string; views?: DocumentView[]}) {
+  const {activeViewId, views = []} = props
+  const {paneKey} = useDocumentPane()
+  const tabPanelId = `${paneKey}tabpanel`
 
   return (
     <div className={styles.headerTabsContainer}>
@@ -20,11 +17,10 @@ export function DocumentHeaderTabs(props: {
         {views.map((view, index) => (
           <DocumentHeaderTab
             icon={view.icon}
-            id={`${idPrefix}tab-${view.id}`}
+            id={`${paneKey}tab-${view.id}`}
             isActive={activeViewId === view.id}
             key={view.id}
             label={<>{view.title}</>}
-            onSetView={onSetActiveView}
             tabPanelId={tabPanelId}
             viewId={index === 0 ? null : view.id}
           />
@@ -39,23 +35,21 @@ function DocumentHeaderTab(props: {
   id: string
   isActive: boolean
   label: React.ReactNode
-  onSetView: (id: string | null) => void
   tabPanelId: string
   viewId: string | null
 }) {
-  const handleClick = useCallback(() => props.onSetView(props.viewId), [
-    props.onSetView,
-    props.viewId
-  ])
+  const {icon, id, isActive, label, tabPanelId, viewId} = props
+  const {setActiveView} = useDocumentPane()
+  const handleClick = useCallback(() => setActiveView(viewId), [setActiveView, viewId])
 
   return (
     <Tab
-      icon={props.icon}
-      id={props.id}
-      isActive={props.isActive}
-      label={props.label}
+      icon={icon}
+      id={id}
+      isActive={isActive}
+      label={label}
       onClick={handleClick}
-      aria-controls={props.tabPanelId}
+      aria-controls={tabPanelId}
     />
   )
 }

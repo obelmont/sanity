@@ -48,8 +48,8 @@ export function mergeChunk(left: Chunk, right: Chunk): Chunk | [Chunk, Chunk] {
 }
 
 export function chunkFromTransaction(transaction: Transaction, pos: number): Chunk {
-  const modifedDraft = transaction.draftEffect != null
-  const modifedPublished = transaction.publishedEffect != null
+  const modifedDraft = transaction.draftEffect !== null
+  const modifedPublished = transaction.publishedEffect !== null
 
   const draftDeleted = modifedDraft && isDeletePatch(transaction.draftEffect!.apply)
   const publishedDeleted = modifedPublished && isDeletePatch(transaction.publishedEffect!.apply)

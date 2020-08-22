@@ -31,9 +31,11 @@
 
 .documentContainer {
   flex: 3;
+  min-width: 0;
 }
 
 .changesContainer {
   flex: 2;
+  min-width: 0;
   border-left: 1px solid #ddd;
 }

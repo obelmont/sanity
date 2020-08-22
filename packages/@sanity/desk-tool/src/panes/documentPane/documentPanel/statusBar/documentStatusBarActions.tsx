@@ -5,17 +5,16 @@ import Button from 'part:@sanity/components/buttons/default'
 import Hotkeys from 'part:@sanity/components/typography/hotkeys'
 import {RenderActionCollectionState} from 'part:@sanity/base/actions/utils'
 import resolveDocumentActions from 'part:@sanity/base/document-actions/resolver'
-
 import {HistoryRestoreAction} from '../../../../actions/HistoryRestoreAction'
-import styles from './documentStatusBarActions.css'
+import {useDocument} from '../../utils/document'
 import {ActionMenu} from './actionMenu'
 import {ActionStateDialog} from './actionStateDialog'
+
+import styles from './documentStatusBarActions.css'
 
 const TOUCH_SUPPORT = 'ontouchstart' in document.documentElement
 
 interface Props {
-  id: string
-  type: string
   states: any[]
   disabled: boolean
   isMenuOpen: boolean
@@ -89,12 +88,12 @@ function DocumentStatusBarActionsInner(props: Props) {
   )
 }
 
-export function DocumentStatusBarActions(props: {id: string; type: string}) {
-  const editState: any = useEditState(props.id, props.type)
-  const connectionState = useConnectionState(props.id, props.type)
-
+export function DocumentStatusBarActions() {
+  const doc = useDocument()
+  // const doc = useDocument()
+  const editState: any = useEditState(doc.id, doc.typeName)
+  const connectionState = useConnectionState(doc.id, doc.typeName)
   const [isMenuOpen, setMenuOpen] = React.useState(false)
-
   const actions = editState ? resolveDocumentActions(editState) : null
 
   return actions ? (
@@ -113,16 +112,15 @@ export function DocumentStatusBarActions(props: {id: string; type: string}) {
 }
 
 interface HistoryStatusBarActionsProps {
-  id: string
-  type: string
   revision: string
 }
 
 const historyActions = [HistoryRestoreAction]
 
 export function HistoryStatusBarActions(props: HistoryStatusBarActionsProps) {
-  const editState: any = useEditState(props.id, props.type)
-  const connectionState = useConnectionState(props.id, props.type)
+  const doc = useDocument()
+  const editState: any = useEditState(doc.id, doc.typeName)
+  const connectionState = useConnectionState(doc.id, doc.typeName)
 
   if (!editState) {
     return null

@@ -60,6 +60,10 @@ export function useObservable<T>(observable$: Observable<T>, initialValue?: T): 
     []
   )
 
+  React.useEffect(() => {
+    console.warn('the observable changed')
+  }, [observable$])
+
   return value
 }
 
