@@ -25,7 +25,7 @@ module.exports = {
     'no-useless-constructor': 'off',
     '@typescript-eslint/no-useless-constructor': 'error',
     // ---
-    '@typescript-eslint/no-use-before-define': 'off',
+    'no-use-before-define': 'off',
     "@typescript-eslint/explicit-function-return-type": 'off',
 
     '@typescript-eslint/no-var-requires': 'off', // covered by @typescript-eslint/no-var-requires
