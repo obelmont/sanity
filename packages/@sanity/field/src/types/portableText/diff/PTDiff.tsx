@@ -2,9 +2,10 @@ import React, {useMemo} from 'react'
 
 import {DiffComponent, ObjectDiff, ObjectSchemaType} from '../../../diff'
 import Block from './components/Block'
-import {createChildMap} from './helpers'
+import {createChildMap, prepareDiffForPortableText} from './helpers'
 
 import styles from './PTDiff.css'
+import {ArrayDiff} from '@sanity/diff'
 
 export const PTDiff: DiffComponent<ObjectDiff> = function PTDiff({
   diff,
@@ -13,9 +14,10 @@ export const PTDiff: DiffComponent<ObjectDiff> = function PTDiff({
   diff: ObjectDiff
   schemaType: ObjectSchemaType
 }) {
-  const childMap = useMemo(() => createChildMap(diff, schemaType), [diff])
-  const portableText = useMemo(() => <Block diff={diff} childMap={childMap} />, [diff])
-  const classNames = [styles.root, styles[diff.action]].join(' ')
+  const _diff = prepareDiffForPortableText(diff)
+  const childMap = useMemo(() => createChildMap(_diff, schemaType), [diff])
+  const portableText = useMemo(() => <Block diff={_diff} childMap={childMap} />, [diff])
+  const classNames = [styles.root, styles[_diff.action]].join(' ')
   return (
     <div className={classNames}>
       {/* Diff */}

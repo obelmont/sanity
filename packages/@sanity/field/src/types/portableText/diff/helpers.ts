@@ -110,7 +110,7 @@ function isRemoveInlineObject(cDiff: ObjectDiff) {
   )
 }
 
-function isAddMark(cDiff: ObjectDiff, cSchemaType?: SchemaType) {
+export function isAddMark(cDiff: ObjectDiff, cSchemaType?: SchemaType) {
   if (!cSchemaType) {
     return false
   }
@@ -122,6 +122,21 @@ function isAddMark(cDiff: ObjectDiff, cSchemaType?: SchemaType) {
     cDiff.fields.marks.toValue.length > 0 &&
     cSchemaType.jsonType === 'object' &&
     cDiff.fields.marks.toValue.some(
+      mark => typeof mark === 'string' && cSchemaType && isDecorator(mark, cSchemaType)
+    )
+  )
+}
+
+export function isRemoveMark(cDiff: ObjectDiff, cSchemaType?: SchemaType) {
+  if (!cSchemaType) {
+    return false
+  }
+  return (
+    cDiff.fields.marks &&
+    cDiff.fields.marks.isChanged &&
+    cDiff.fields.marks.action === 'removed' &&
+    Array.isArray(cDiff.fields.marks.fromValue) &&
+    cDiff.fields.marks.fromValue.some(
       mark => typeof mark === 'string' && cSchemaType && isDecorator(mark, cSchemaType)
     )
   )
@@ -177,7 +192,18 @@ export function diffDidRemove(blockDiff: ObjectDiff) {
   const childrenDiff = blockDiff.fields.children as ArrayDiff
   return (
     blockDiff.action === 'removed' ||
-    (childrenDiff && childrenDiff.items.some(item => item.diff.action === 'removed'))
+    (childrenDiff &&
+      childrenDiff.items.some(
+        item =>
+          item.diff &&
+          item.diff.action === 'removed' &&
+          // Don't treat as removed if only marks are removed
+          !(
+            item.diff.type === 'object' &&
+            Object.keys(item.diff.fields).length === 1 &&
+            item.diff.fields.marks
+          )
+      ))
   )
 }
 
@@ -195,4 +221,45 @@ export function isDecorator(name: string, schemaType: SpanTypeSchema) {
 export function childIsSpan(child: PortableTextChild) {
   const isObject = typeof child === 'object'
   return isObject && typeof child._type === 'string' && child._type === 'span'
+}
+
+export function didChangeMarksOnly(diff: ObjectDiff) {
+  const from = blockToText(diff.fromValue)
+  const to = blockToText(diff.toValue)
+  const childrenDiff = diff.fields.children as ArrayDiff
+  const hasMarkDiffs =
+    !!childrenDiff &&
+    childrenDiff.items.every(
+      item => item.diff.isChanged && item.diff.type === 'object' && item.diff.fields.marks
+    )
+  return from === to && hasMarkDiffs
+}
+
+export function blockToText(block, opts = {nonTextBehavior: 'remove'}) {
+  if (!block) {
+    return ''
+  }
+  return block.children.map(child => child.text || '').join('')
+}
+
+export function prepareDiffForPortableText(diff: ObjectDiff) {
+  let _diff = {...diff} // Make a copy so we don't manipulate the original diff
+  // Special condition when the only change is adding marks
+  const onlyMarksAreChanged = didChangeMarksOnly(_diff)
+  if (onlyMarksAreChanged) {
+    const childrenItem = _diff.fields.children
+    if (childrenItem && childrenItem.type === 'array') {
+      childrenItem.items.forEach(item => {
+        if (item.diff.type === 'object') {
+          const itemDiff = item.diff as ObjectDiff
+          Object.keys(itemDiff.fields).forEach(key => {
+            if (key !== 'marks') {
+              delete itemDiff.fields[key]
+            }
+          })
+        }
+      })
+    }
+  }
+  return _diff
 }

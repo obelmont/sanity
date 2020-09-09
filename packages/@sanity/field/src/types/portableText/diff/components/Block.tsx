@@ -10,7 +10,7 @@ import Header from './Header'
 import Paragraph from './Paragraph'
 import Span from './Span'
 
-import {ObjectDiff} from '../../../../diff'
+import {ObjectDiff, DiffAnnotation} from '../../../../diff'
 import {ObjectSchemaType} from '../../../../types'
 
 type Props = {
@@ -49,14 +49,18 @@ export default function Block(props: Props): JSX.Element {
   }
 
   const renderChild = (child: PortableTextChild) => {
+    let diff
     const fromMap = childMap[child._key]
-    const diff = fromMap.diff as ObjectDiff
+    if (fromMap) {
+      diff = fromMap.diff as ObjectDiff
+    }
     const isSpan = childIsSpan(child)
     // Render span or inline object?
     const renderInlineObject = renderObjectTypes[child._type]
-    const renderSpanOrInline = renderInlineObject
-      ? props => renderInlineObject({...props, child, diff})
-      : props => renderSpan({...props, child, diff})
+    const renderSpanOrInline =
+      !isSpan && renderInlineObject
+        ? props => renderInlineObject({...props, child, diff})
+        : props => renderSpan({...props, child, diff})
     let returned = renderSpanOrInline({child})
     // Render decorators
     isSpan &&
@@ -64,6 +68,24 @@ export default function Block(props: Props): JSX.Element {
       (
         child.marks.filter(mark => isDecorator(mark, fromMap.schemaType as ObjectSchemaType)) || []
       ).map(mark => {
+        const hasMarksDiff =
+          diff &&
+          (diff.fromValue === child || diff.toValue === child) &&
+          diff.isChanged &&
+          diff.fields.marks &&
+          diff.fields.marks.type === 'array'
+        if (hasMarksDiff) {
+          const didRemove = diff.fields.marks.action === 'removed'
+          returned = (
+            <DiffAnnotation
+              annotation={diff.annotation}
+              as={didRemove ? 'del' : 'ins'}
+              description={`${didRemove ? 'Removed' : 'Added'} formatting`}
+            >
+              {returned}
+            </DiffAnnotation>
+          )
+        }
         returned = (
           <Decorator key={`decorator-${child._key}-${mark}`} block={block} mark={mark} span={child}>
             {returned}
