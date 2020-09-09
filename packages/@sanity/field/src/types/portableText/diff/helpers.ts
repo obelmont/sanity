@@ -1,26 +1,27 @@
-import {ArrayDiff, ObjectDiff, StringDiff} from '../../../diff'
 import {startCase} from 'lodash'
-import {ChildMap, PortableTextBlock, PortableTextChild, SpanTypeSchema} from './types'
+import {ArrayDiff, ObjectDiff, StringDiff} from '../../../diff'
 import {SchemaType, ObjectSchemaType} from '../../../types'
+import {ChildMap, PortableTextBlock, PortableTextChild, SpanTypeSchema} from './types'
 
 export const UNKNOWN_TYPE_NAME = '_UNKOWN_TYPE_'
 
-export function isPTSchemaType(schemaType: SchemaType) {
+export function isPTSchemaType(schemaType: SchemaType): boolean {
   return schemaType.jsonType === 'object' && schemaType.name === 'block'
 }
-export function isHeader(node: PortableTextBlock) {
+export function isHeader(node: PortableTextBlock): boolean {
   return !!node.style && ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(node.style)
 }
 
-export function createChildMap(blockDiff: ObjectDiff, schemaType: ObjectSchemaType) {
+export function createChildMap(blockDiff: ObjectDiff, schemaType: ObjectSchemaType): ChildMap {
   // Create a map from span to diff
   const block = (diffDidRemove(blockDiff)
     ? blockDiff.fromValue
     : blockDiff.toValue) as PortableTextBlock
   const childMap: ChildMap = {}
   const children = block.children || []
+  // eslint-disable-next-line complexity
   children.forEach(child => {
-    let summary: string[] = []
+    const summary: string[] = []
     // Fallback type for renderer (unkown types)
     if (typeof child !== 'object' || typeof child._type !== 'string') {
       child._type = UNKNOWN_TYPE_NAME
@@ -31,6 +32,7 @@ export function createChildMap(blockDiff: ObjectDiff, schemaType: ObjectSchemaTy
     if (cDiff) {
       const textDiff = cDiff.fields.text as StringDiff
       if (textDiff && textDiff.isChanged) {
+        // eslint-disable-next-line max-depth
         if (textDiff.action === 'changed') {
           summary.push(`Changed '${textDiff.fromValue}' to  '${textDiff.toValue}'`)
         } else {
@@ -110,11 +112,11 @@ function isRemoveInlineObject(cDiff: ObjectDiff) {
   )
 }
 
-export function isAddMark(cDiff: ObjectDiff, cSchemaType?: SchemaType) {
+export function isAddMark(cDiff: ObjectDiff, cSchemaType?: SchemaType): boolean {
   if (!cSchemaType) {
     return false
   }
-  return (
+  return !!(
     cDiff.fields.marks &&
     cDiff.fields.marks.isChanged &&
     cDiff.fields.marks.action === 'added' &&
@@ -127,11 +129,11 @@ export function isAddMark(cDiff: ObjectDiff, cSchemaType?: SchemaType) {
   )
 }
 
-export function isRemoveMark(cDiff: ObjectDiff, cSchemaType?: SchemaType) {
+export function isRemoveMark(cDiff: ObjectDiff, cSchemaType?: SchemaType): boolean {
   if (!cSchemaType) {
     return false
   }
-  return (
+  return !!(
     cDiff.fields.marks &&
     cDiff.fields.marks.isChanged &&
     cDiff.fields.marks.action === 'removed' &&
@@ -142,11 +144,11 @@ export function isRemoveMark(cDiff: ObjectDiff, cSchemaType?: SchemaType) {
   )
 }
 
-function isAddAnnotation(cDiff: ObjectDiff, cSchemaType?: SchemaType) {
+function isAddAnnotation(cDiff: ObjectDiff, cSchemaType?: SchemaType): boolean {
   if (!cSchemaType) {
     return false
   }
-  return (
+  return !!(
     cDiff.fields.marks &&
     cDiff.fields.marks.isChanged &&
     cDiff.fields.marks.action === 'added' &&
@@ -159,11 +161,11 @@ function isAddAnnotation(cDiff: ObjectDiff, cSchemaType?: SchemaType) {
   )
 }
 
-function isRemoveAnnotation(cDiff: ObjectDiff, cSchemaType?: SchemaType) {
+function isRemoveAnnotation(cDiff: ObjectDiff, cSchemaType?: SchemaType): boolean {
   if (!cSchemaType) {
     return false
   }
-  return (
+  return !!(
     cDiff.fields.marks &&
     cDiff.fields.marks.isChanged &&
     cDiff.fields.marks.action === 'removed' &&
@@ -188,9 +190,9 @@ function getChildSchemaType(fields: any[], child: PortableTextChild) {
   return cSchemaType
 }
 
-export function diffDidRemove(blockDiff: ObjectDiff) {
+export function diffDidRemove(blockDiff: ObjectDiff): boolean {
   const childrenDiff = blockDiff.fields.children as ArrayDiff
-  return (
+  return !!(
     blockDiff.action === 'removed' ||
     (childrenDiff &&
       childrenDiff.items.some(
@@ -207,25 +209,25 @@ export function diffDidRemove(blockDiff: ObjectDiff) {
   )
 }
 
-export function getDecorators(spanSchemaType: SpanTypeSchema) {
+export function getDecorators(spanSchemaType: SpanTypeSchema): {title: string; value: string}[] {
   if (spanSchemaType.decorators) {
     return spanSchemaType.decorators
   }
   return []
 }
 
-export function isDecorator(name: string, schemaType: SpanTypeSchema) {
+export function isDecorator(name: string, schemaType: SpanTypeSchema): boolean {
   return getDecorators(schemaType).some(dec => dec.value === name)
 }
 
-export function childIsSpan(child: PortableTextChild) {
+export function childIsSpan(child: PortableTextChild): boolean {
   const isObject = typeof child === 'object'
   return isObject && typeof child._type === 'string' && child._type === 'span'
 }
 
-export function didChangeMarksOnly(diff: ObjectDiff) {
-  const from = blockToText(diff.fromValue)
-  const to = blockToText(diff.toValue)
+export function didChangeMarksOnly(diff: ObjectDiff): boolean {
+  const from = blockToText(diff.fromValue as PortableTextBlock)
+  const to = blockToText(diff.toValue as PortableTextBlock)
   const childrenDiff = diff.fields.children as ArrayDiff
   const hasMarkDiffs =
     !!childrenDiff &&
@@ -235,31 +237,99 @@ export function didChangeMarksOnly(diff: ObjectDiff) {
   return from === to && hasMarkDiffs
 }
 
-export function blockToText(block, opts = {nonTextBehavior: 'remove'}) {
+export function marksAreChangedByAction(
+  diff: ObjectDiff,
+  action: 'added' | 'removed' | 'changed'
+): boolean {
+  const childrenDiff = diff.fields.children as ArrayDiff
+  const hasMarkDiffs =
+    !!childrenDiff &&
+    childrenDiff.items.some(
+      item =>
+        item.diff.isChanged &&
+        item.diff.type === 'object' &&
+        item.diff.fields.marks &&
+        item.diff.fields.marks.action === action
+    )
+  return hasMarkDiffs
+}
+
+export function blockToText(block: PortableTextBlock | undefined | null): string {
   if (!block) {
     return ''
   }
   return block.children.map(child => child.text || '').join('')
 }
 
-export function prepareDiffForPortableText(diff: ObjectDiff) {
-  let _diff = {...diff} // Make a copy so we don't manipulate the original diff
-  // Special condition when the only change is adding marks
-  const onlyMarksAreChanged = didChangeMarksOnly(_diff)
-  if (onlyMarksAreChanged) {
-    const childrenItem = _diff.fields.children
-    if (childrenItem && childrenItem.type === 'array') {
-      childrenItem.items.forEach(item => {
-        if (item.diff.type === 'object') {
-          const itemDiff = item.diff as ObjectDiff
-          Object.keys(itemDiff.fields).forEach(key => {
-            if (key !== 'marks') {
-              delete itemDiff.fields[key]
-            }
-          })
+export function prepareDiffForPortableText(diff: ObjectDiff): ObjectDiff {
+  const _diff = {...diff} // Make a copy so we don't manipulate the original diff object
+
+  // Special condition when the only change is adding marks (then just remove all the other diffs)
+  //   const onlyMarksAreChanged = didChangeMarksOnly(_diff)
+  //   if (onlyMarksAreChanged) {
+  //     const childrenItem = _diff.fields.children
+  //     if (childrenItem && childrenItem.type === 'array') {
+  //       childrenItem.items.forEach(item => {
+  //         if (item.diff.type === 'object') {
+  //           const itemDiff = item.diff as ObjectDiff
+  //           Object.keys(itemDiff.fields).forEach(key => {
+  //             if (key !== 'marks') {
+  //               delete itemDiff.fields[key]
+  //             }
+  //           })
+  //         }
+  //       })
+  //     }
+  //   }
+  if (marksAreChangedByAction(_diff, 'added') && _diff.toValue) {
+    // Is child split to add new span with mark?
+    const block = _diff.toValue as PortableTextBlock
+    // Find the span which has an added mark
+    const childrenDiff = _diff.fields.children as ArrayDiff
+    const addMarkItems = childrenDiff.items.filter(
+      item =>
+        item.diff.isChanged &&
+        item.diff.type === 'object' &&
+        item.diff.fields.marks &&
+        item.diff.fields.marks.toValue &&
+        Array.isArray(item.diff.fields.marks.toValue) &&
+        item.diff.fields.marks.toValue.length > 0 &&
+        item.diff.fields.marks.action === 'added'
+    )
+    addMarkItems.forEach(item => {
+      const span = item.diff.toValue as PortableTextChild
+      if (span) {
+        const spanIndex = block.children.findIndex(child => child._key === span._key)
+        const spanBefore = block.children[spanIndex - 1]
+        if (spanBefore) {
+          // Remove the text diff on the span before
+          childrenDiff.items = childrenDiff.items.filter(i => i.diff.toValue !== spanBefore)
         }
-      })
-    }
+        const spanAfter = block.children[spanIndex + 1]
+        if (spanBefore && spanAfter && _diff.fromValue) {
+          const testString = (spanBefore.text || '') + span.text + spanAfter.text
+          // eslint-disable-next-line max-depth
+          if (testString === blockToText(_diff.fromValue as PortableTextBlock)) {
+            // Delete the other diffs
+            childrenDiff.items.forEach(i => {
+              if (i.diff.type === 'object') {
+                const textDiff = i.diff.fields.text as StringDiff
+                if (
+                  textDiff &&
+                  (textDiff.toValue === spanBefore.text ||
+                    textDiff.toValue === span.text ||
+                    textDiff.toValue === spanAfter.text)
+                ) {
+                  delete i.diff.fields.text
+                  // console.log(i.diff.fields.text)
+                }
+              }
+            })
+          }
+        }
+      }
+    })
   }
+  // console.log(_diff)
   return _diff
 }

@@ -5,7 +5,6 @@ import Block from './components/Block'
 import {createChildMap, prepareDiffForPortableText} from './helpers'
 
 import styles from './PTDiff.css'
-import {ArrayDiff} from '@sanity/diff'
 
 export const PTDiff: DiffComponent<ObjectDiff> = function PTDiff({
   diff,

@@ -7,10 +7,11 @@ import styles from './Span.css'
 
 type Props = {
   block: PortableTextBlock
+  // eslint-disable-next-line react/require-default-props
   diff?: ObjectDiff
   span: PortableTextChild
 }
-export default function Span(props: Props) {
+export default function Span(props: Props): JSX.Element {
   const {diff, span, block} = props
   let returned = <>{span.text}</>
   if (span.text === '') {
@@ -18,15 +19,18 @@ export default function Span(props: Props) {
   } else if (diff) {
     const textDiff = diff.fields.text as StringDiff
     if (textDiff && textDiff.isChanged) {
-      // Test to see if this span is created by adding a mark to a word
-      const myIndex = block.children.findIndex(chld => chld._key === span._key)
-      const nextSpan = block.children[myIndex + 1]
-      const nextSpanHasDifferentMarks = !isEqual(span.marks, nextSpan && nextSpan.marks)
-      if (nextSpanHasDifferentMarks) {
-        const rest = block.children.slice(block.children.indexOf(span) + 1)
-        const restText = blockToText({children: rest})
-        textDiff.segments = textDiff.segments.filter(seg => restText.indexOf(seg.text))
-      }
+      // console.log(textDiff)
+      // // Test to see if this span is created by adding a mark to a word
+      // const myIndex = block.children.findIndex(chld => chld._key === span._key)
+      // const nextSpan = block.children[myIndex + 1]
+      // const nextSpanHasDifferentMarks = !isEqual(span.marks, nextSpan && nextSpan.marks)
+      // // eslint-disable-next-line max-depth
+      // if (nextSpanHasDifferentMarks) {
+      //   const rest = block.children.slice(block.children.indexOf(span) + 1)
+      //   const restText = blockToText({_key: 'bogus', _type: 'block', children: rest})
+      //   console.log(restText)
+      //   textDiff.segments = textDiff.segments.filter(seg => restText.indexOf(seg.text))
+      // }
       returned = <AnnotatedStringDiff diff={textDiff} />
     }
   }

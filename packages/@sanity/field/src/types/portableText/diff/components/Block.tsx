@@ -2,6 +2,8 @@ import React, {SyntheticEvent} from 'react'
 import {PortableTextBlock, PortableTextChild, ChildMap} from '../types'
 import {isDecorator, isHeader, childIsSpan, diffDidRemove, UNKNOWN_TYPE_NAME} from '../helpers'
 
+import {ObjectDiff, DiffAnnotation} from '../../../../diff'
+import {ObjectSchemaType} from '../../../../types'
 import Annotation from './Annotation'
 import Decorator from './Decorator'
 import InlineObject from './InlineObject'
@@ -9,9 +11,6 @@ import Blockquote from './Blockquote'
 import Header from './Header'
 import Paragraph from './Paragraph'
 import Span from './Span'
-
-import {ObjectDiff, DiffAnnotation} from '../../../../diff'
-import {ObjectSchemaType} from '../../../../types'
 
 type Props = {
   diff: ObjectDiff
@@ -23,6 +22,7 @@ export default function Block(props: Props): JSX.Element {
 
   const handleObjectFocus = (event: SyntheticEvent<HTMLSpanElement>) => {
     // TODO: implement this later on when we can do focus in the editor pane
+    // eslint-disable-next-line no-alert
     alert('Focus object here!')
   }
 
@@ -48,37 +48,39 @@ export default function Block(props: Props): JSX.Element {
     return <>{returned}</>
   }
 
+  // eslint-disable-next-line complexity
   const renderChild = (child: PortableTextChild) => {
-    let diff
+    let cDiff
     const fromMap = childMap[child._key]
     if (fromMap) {
-      diff = fromMap.diff as ObjectDiff
+      cDiff = fromMap.diff as ObjectDiff
     }
     const isSpan = childIsSpan(child)
     // Render span or inline object?
     const renderInlineObject = renderObjectTypes[child._type]
     const renderSpanOrInline =
       !isSpan && renderInlineObject
-        ? props => renderInlineObject({...props, child, diff})
-        : props => renderSpan({...props, child, diff})
+        ? cProps => renderInlineObject({...cProps, child, diff: cDiff})
+        : cProps => renderSpan({...cProps, child, diff: cDiff})
     let returned = renderSpanOrInline({child})
     // Render decorators
+    // eslint-disable-next-line no-unused-expressions
     isSpan &&
       child.marks &&
       (
         child.marks.filter(mark => isDecorator(mark, fromMap.schemaType as ObjectSchemaType)) || []
-      ).map(mark => {
+      ).forEach(mark => {
         const hasMarksDiff =
-          diff &&
-          (diff.fromValue === child || diff.toValue === child) &&
-          diff.isChanged &&
-          diff.fields.marks &&
-          diff.fields.marks.type === 'array'
+          cDiff &&
+          (cDiff.fromValue === child || cDiff.toValue === child) &&
+          cDiff.isChanged &&
+          cDiff.fields.marks &&
+          cDiff.fields.marks.type === 'array'
         if (hasMarksDiff) {
-          const didRemove = diff.fields.marks.action === 'removed'
+          const didRemove = cDiff.fields.marks.action === 'removed'
           returned = (
             <DiffAnnotation
-              annotation={diff.annotation}
+              annotation={cDiff.annotation}
               as={didRemove ? 'del' : 'ins'}
               description={`${didRemove ? 'Removed' : 'Added'} formatting`}
             >
@@ -93,11 +95,12 @@ export default function Block(props: Props): JSX.Element {
         )
       })
     // Render annotations
+    // eslint-disable-next-line no-unused-expressions
     isSpan &&
       child.marks &&
       (
         child.marks.filter(mark => !isDecorator(mark, fromMap.schemaType as ObjectSchemaType)) || []
-      ).map(markDefKey => {
+      ).forEach(markDefKey => {
         returned = (
           <Annotation
             block={block}
@@ -113,23 +116,28 @@ export default function Block(props: Props): JSX.Element {
     return returned
   }
 
-  const renderSpan = (props: {child: PortableTextChild; diff: ObjectDiff}): React.ReactNode => {
-    const {child, diff} = props
-    return <Span key={`span-${child._key}`} block={block} diff={diff} span={child} />
+  const renderSpan = (sProps: {child: PortableTextChild; diff: ObjectDiff}): React.ReactNode => {
+    return (
+      <Span
+        key={`span-${sProps.child._key}`}
+        block={block}
+        diff={sProps.diff}
+        span={sProps.child}
+      />
+    )
   }
 
   // Set up renderers for inline object types
   // TODO: previews from schema
-  const renderInlineObject = (props: {
+  const renderInlineObject = (cProps: {
     child: PortableTextChild
     diff: ObjectDiff
   }): React.ReactNode => {
-    const {child, diff} = props
     return (
       <InlineObject
-        key={`inline-object-${child._key}`}
-        object={child}
-        diff={diff}
+        key={`inline-object-${cProps.child._key}`}
+        object={cProps.child}
+        diff={cProps.diff}
         onClick={handleObjectFocus}
       />
     )
