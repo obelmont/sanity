@@ -196,15 +196,13 @@ export function diffDidRemove(blockDiff: ObjectDiff): boolean {
     blockDiff.action === 'removed' ||
     (childrenDiff &&
       childrenDiff.items.some(
-        item =>
-          item.diff &&
-          item.diff.action === 'removed' &&
-          // Don't treat as removed if only marks are removed
-          !(
-            item.diff.type === 'object' &&
-            Object.keys(item.diff.fields).length === 1 &&
-            item.diff.fields.marks
-          )
+        item => item.diff && item.diff.action === 'removed' // &&
+        // // Don't treat as removed if only marks are removed
+        // !(
+        //   item.diff.type === 'object' &&
+        //   Object.keys(item.diff.fields).length === 1 &&
+        //   item.diff.fields.marks
+        // )
       ))
   )
 }
@@ -265,71 +263,124 @@ export function prepareDiffForPortableText(diff: ObjectDiff): ObjectDiff {
   const _diff = {...diff} // Make a copy so we don't manipulate the original diff object
 
   // Special condition when the only change is adding marks (then just remove all the other diffs)
-  //   const onlyMarksAreChanged = didChangeMarksOnly(_diff)
-  //   if (onlyMarksAreChanged) {
-  //     const childrenItem = _diff.fields.children
-  //     if (childrenItem && childrenItem.type === 'array') {
-  //       childrenItem.items.forEach(item => {
-  //         if (item.diff.type === 'object') {
-  //           const itemDiff = item.diff as ObjectDiff
-  //           Object.keys(itemDiff.fields).forEach(key => {
-  //             if (key !== 'marks') {
-  //               delete itemDiff.fields[key]
-  //             }
-  //           })
-  //         }
-  //       })
-  //     }
-  //   }
-  if (marksAreChangedByAction(_diff, 'added') && _diff.toValue) {
-    // Is child split to add new span with mark?
-    const block = _diff.toValue as PortableTextBlock
-    // Find the span which has an added mark
-    const childrenDiff = _diff.fields.children as ArrayDiff
-    const addMarkItems = childrenDiff.items.filter(
-      item =>
-        item.diff.isChanged &&
-        item.diff.type === 'object' &&
-        item.diff.fields.marks &&
-        item.diff.fields.marks.toValue &&
-        Array.isArray(item.diff.fields.marks.toValue) &&
-        item.diff.fields.marks.toValue.length > 0 &&
-        item.diff.fields.marks.action === 'added'
-    )
-    addMarkItems.forEach(item => {
-      const span = item.diff.toValue as PortableTextChild
-      if (span) {
-        const spanIndex = block.children.findIndex(child => child._key === span._key)
-        const spanBefore = block.children[spanIndex - 1]
-        if (spanBefore) {
-          // Remove the text diff on the span before
-          childrenDiff.items = childrenDiff.items.filter(i => i.diff.toValue !== spanBefore)
+  const onlyMarksAreChanged = didChangeMarksOnly(_diff)
+  if (onlyMarksAreChanged) {
+    const childrenItem = _diff.fields.children
+    if (childrenItem && childrenItem.type === 'array') {
+      childrenItem.items.forEach(item => {
+        if (item.diff.type === 'object') {
+          const itemDiff = item.diff as ObjectDiff
+          Object.keys(itemDiff.fields).forEach(key => {
+            if (key !== 'marks') {
+              delete itemDiff.fields[key]
+            }
+          })
         }
-        const spanAfter = block.children[spanIndex + 1]
-        if (spanBefore && spanAfter && _diff.fromValue) {
-          const testString = (spanBefore.text || '') + span.text + spanAfter.text
-          // eslint-disable-next-line max-depth
-          if (testString === blockToText(_diff.fromValue as PortableTextBlock)) {
-            // Delete the other diffs
-            childrenDiff.items.forEach(i => {
-              if (i.diff.type === 'object') {
-                const textDiff = i.diff.fields.text as StringDiff
-                if (
-                  textDiff &&
-                  (textDiff.toValue === spanBefore.text ||
-                    textDiff.toValue === span.text ||
-                    textDiff.toValue === spanAfter.text)
-                ) {
-                  delete i.diff.fields.text
-                  // console.log(i.diff.fields.text)
-                }
-              }
-            })
-          }
-        }
-      }
-    })
+      })
+    }
   }
+  // else if (marksAreChangedByAction(_diff, 'added') && _diff.toValue) {
+  //   console.log('Marks added, but there is more!')
+  //   // Is child split to add new span with mark?
+  //   const block = _diff.toValue as PortableTextBlock
+  //   // Find the span which has an added mark
+  //   const childrenDiff = _diff.fields.children as ArrayDiff
+  //   // console.log(
+  //   //   JSON.stringify(
+  //   //     childrenDiff.items.map(item => item.diff),
+  //   //     null,
+  //   //     2
+  //   //   )
+  //   // )
+  //   const addMarkItems = childrenDiff.items.filter(
+  //     item =>
+  //       item.diff.isChanged &&
+  //       item.diff.type === 'object' &&
+  //       item.diff.fields.marks &&
+  //       item.diff.fields.marks.toValue &&
+  //       Array.isArray(item.diff.fields.marks.toValue) &&
+  //       item.diff.fields.marks.toValue.length > 0
+  //   )
+  //   console.log('diff', _diff)
+  //   console.log('addMarkItems', addMarkItems)
+  //   // eslint-disable-next-line complexity
+  //   addMarkItems.forEach(item => {
+  //     const span = item.diff.toValue as PortableTextChild
+  //     let spanBeforeDiff
+  //     if (span) {
+  //       const spanIndex = block.children.findIndex(child => child._key === span._key)
+  //       const spanBefore = block.children[spanIndex - 1]
+  //       if (spanBefore) {
+  //         // Remove the text diff segment that is removed from the spanBefore but exists on the current span
+  //         const spanDiff = childrenDiff.items.find(i => i.diff.toValue === spanBefore)?.diff
+  //         // eslint-disable-next-line max-depth
+  //         if (spanDiff) {
+  //           const textDiff =
+  //             spanDiff.type === 'object' &&
+  //             !!spanDiff.fields.text &&
+  //             spanDiff.fields.text.type === 'string' &&
+  //             spanDiff.fields.text
+  //           // eslint-disable-next-line max-depth
+  //           if (textDiff && textDiff.segments[textDiff.segments.length - 1].action === 'removed') {
+  //             spanBeforeDiff = textDiff
+  //             textDiff.segments = textDiff.segments.slice(0, textDiff.segments.length - 1)
+  //           }
+  //         }
+  //       } else if (
+  //         item.diff.type === 'object' &&
+  //         item.diff.fields.text &&
+  //         item.diff.fields.text.type === 'string'
+  //       ) {
+  //         item.diff.fields.text.segments = item.diff.fields.text.segments.filter(
+  //           segment => segment.action !== 'removed'
+  //         )
+  //       }
+  //       const spanAfter = block.children[spanIndex + 1]
+  //       if (spanAfter) {
+  //         // Remove the text diff segment that is removed from the spanBefore but exists on the current span
+  //         const spanDiff = childrenDiff.items.find(i => i.diff.toValue === spanAfter)?.diff
+  //         // eslint-disable-next-line max-depth
+  //         if (spanDiff) {
+  //           const textDiff =
+  //             spanDiff.type === 'object' &&
+  //             !!spanDiff.fields.text &&
+  //             spanDiff.fields.text.type === 'string' &&
+  //             spanDiff.fields.text
+  //           // eslint-disable-next-line max-depth
+  //           if (textDiff && textDiff.segments[textDiff.segments.length - 1].action === 'added') {
+  //             // eslint-disable-next-line max-depth
+  //             if (
+  //               spanBeforeDiff &&
+  //               textDiff.segments.length === 1 &&
+  //               textDiff.segments[0].action === 'added' &&
+  //               spanBeforeDiff.fromValue.indexOf(
+  //                 textDiff.segments[textDiff.segments.length - 1].text
+  //               ) > -1 &&
+  //               spanBeforeDiff.fromValue.substring(
+  //                 spanBeforeDiff.fromValue.indexOf(
+  //                   textDiff.segments[textDiff.segments.length - 1].text
+  //                 )
+  //               ) === textDiff.segments[textDiff.segments.length - 1].text
+  //             ) {
+  //               textDiff.segments[textDiff.segments.length - 1].action = 'unchanged'
+  //             } else {
+  //               // Diff what's changed here!
+  //               console.log('diffing what is changed in the spanAfter', textDiff.segments)
+  //               console.log('spanBeforeDiff', spanBeforeDiff)
+  //               const blockFromValueText = blockToText(_diff.fromValue as PortableTextBlock)
+  //               const blockToValueText = blockToText(_diff.toValue as PortableTextBlock)
+  //               console.log('Value before:', blockFromValueText)
+  //               console.log('Value now:', blockToValueText)
+  //               // textDiff.segments = textDiff.segments.filter(seg => {
+  //               //   seg.text
+  //               // })
+  //             }
+  //           }
+  //         }
+  //       }
+  //     }
+  //   })
+  // }
   // console.log(_diff)
   return _diff
 }
