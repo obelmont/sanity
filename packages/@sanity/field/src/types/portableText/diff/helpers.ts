@@ -423,7 +423,7 @@ function buildSegments(
   }[] = []
 
   const dmpDiffs = dmp.diff_main(fromInput, toInput)
-  dmp.diff_cleanupSemantic(dmpDiffs)
+  dmp.diff_cleanupEfficiency(dmpDiffs)
 
   let fromIdx = 0
   let toIdx = 0

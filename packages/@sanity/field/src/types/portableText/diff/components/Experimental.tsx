@@ -4,9 +4,10 @@ import {PortableTextBlock, PortableTextChild, ChildMap, PortableTextDiff} from '
 import {isDecorator, isHeader, childIsSpan, UNKNOWN_TYPE_NAME, getChildSchemaType} from '../helpers'
 
 import {
-  ObjectDiff,
+  ArrayDiff,
   DiffAnnotation,
   DiffAnnotationTooltip,
+  ObjectDiff,
   useDiffAnnotationColor,
   StringDiffSegment
 } from '../../../../diff'
@@ -159,18 +160,71 @@ export default function Block(props: Props): JSX.Element {
   const renderWithMarks = (activeMarks, text, spanSchemaType) => {
     if (activeMarks.length) {
       let returned = <>{text}</>
+      // eslint-disable-next-line complexity
       activeMarks.forEach(mark => {
         if (isDecorator(mark, spanSchemaType)) {
+          // TODO: check if this decorator was added / changed
+          const spanDiff =
+            diff.fields.children &&
+            diff.fields.children.action === 'changed' &&
+            diff.fields.children.type === 'array' &&
+            (diff.fields.children.items.find(
+              item =>
+                item.diff &&
+                item.diff.type === 'object' &&
+                item.diff.fields.marks &&
+                item.diff.fields.marks.type === 'array' &&
+                Array.isArray(item.diff.fields.marks.toValue) &&
+                item.diff.fields.marks.toValue.includes(mark)
+            )?.diff as ObjectDiff)
+          const marksDiff =
+            spanDiff &&
+            spanDiff.fields.marks &&
+            spanDiff.fields.marks.action !== 'unchanged' &&
+            spanDiff.fields.marks
+          if (marksDiff) {
+            returned = (
+              <DiffAnnotation
+                annotation={marksDiff.annotation}
+                as="ins"
+                description="Formatting added by"
+              >
+                {returned}
+              </DiffAnnotation>
+            )
+          }
           returned = (
             <Decorator block={block} mark={mark}>
               {returned}
             </Decorator>
           )
         } else {
-          console.log(mark)
+          // TODO: check if this annotation was added / changed
+          const annotationDiff =
+            diff.fields.markDefs &&
+            diff.fields.markDefs.action === 'changed' &&
+            diff.fields.markDefs.type === 'array' &&
+            diff.fields.markDefs.items.find(
+              item =>
+                item.diff &&
+                typeof item.diff.toValue === 'object' &&
+                item.diff.toValue &&
+                item.diff.toValue._key &&
+                item.diff.toValue._key === mark
+            )?.diff
           returned = (
             <Annotation block={block} markDefKey={mark} onClick={handleObjectFocus}>
-              {returned}
+              {annotationDiff ? (
+                <DiffAnnotation
+                  annotation={diff.annotation}
+                  as="ins"
+                  description="Annotation added by"
+                >
+                  {returned}
+                </DiffAnnotation>
+              ) : (
+                returned
+              )}
             </Annotation>
           )
         }
@@ -183,6 +237,7 @@ export default function Block(props: Props): JSX.Element {
   const renderExperimentalChild = (child: PortableTextChild) => {
     const spanSchemaType = getChildSchemaType(schemaType.fields, child)
     const experimentalSegments = experimentalDiff.fields.children.items[0].diff.fields.text.segments
+    // Clean up mark segements
     const segments: StringDiffSegment[] = flatten(
       experimentalSegments.map(seg => {
         const isMarkStart = seg.text.startsWith("<mark type='")
@@ -222,13 +277,13 @@ export default function Block(props: Props): JSX.Element {
         returnedChildren.push(renderWithMarks(activeMarks, seg.text, spanSchemaType))
       } else if (seg.action === 'removed') {
         returnedChildren.push(
-          <DiffAnnotation annotation={seg.annotation} as="del" description="Removed by">
+          <DiffAnnotation annotation={seg.annotation} as="del" description="Text removed by">
             {renderWithMarks(activeMarks, seg.text, spanSchemaType)}
           </DiffAnnotation>
         )
       } else if (seg.action === 'added') {
         returnedChildren.push(
-          <DiffAnnotation annotation={seg.annotation} as="ins" description="Added by">
+          <DiffAnnotation annotation={seg.annotation} as="ins" description="Text added by">
             {renderWithMarks(activeMarks, seg.text, spanSchemaType)}
           </DiffAnnotation>
         )
