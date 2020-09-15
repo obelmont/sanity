@@ -2,6 +2,7 @@ import React, {useMemo} from 'react'
 
 import {DiffComponent, ObjectDiff, ObjectSchemaType} from '../../../diff'
 import Block from './components/Block'
+import Experimental from './components/Experimental'
 import {createChildMap, prepareDiffForPortableText} from './helpers'
 
 import styles from './PTDiff.css'
@@ -18,9 +19,15 @@ export const PTDiff: DiffComponent<ObjectDiff> = function PTDiff({
   const portableTextDiff = useMemo(() => <Block diff={ptDiff} childMap={childMap} />, [diff])
   let experimentalPortableTextDiff: any = null
   if (experimentalDiff) {
-    const experimentalChildMap = useMemo(() => createChildMap(experimentalDiff, schemaType), [diff])
     experimentalPortableTextDiff = useMemo(
-      () => <Block diff={experimentalDiff} childMap={experimentalChildMap} />,
+      () => (
+        <Experimental
+          diff={ptDiff}
+          childMap={childMap}
+          experimentalDiff={experimentalDiff}
+          schemaType={schemaType}
+        />
+      ),
       [diff]
     )
   }

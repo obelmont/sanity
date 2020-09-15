@@ -201,7 +201,7 @@ function isRemoveAnnotation(cDiff: ObjectDiff, cSchemaType?: SchemaType): boolea
   )
 }
 
-function getChildSchemaType(fields: any[], child: PortableTextChild) {
+export function getChildSchemaType(fields: any[], child: PortableTextChild) {
   const childrenField = fields.find(f => f.name === 'children')
   const cSchemaType =
     (childrenField &&
@@ -276,7 +276,11 @@ export function blockToSymbolizedText(block: PortableTextBlock | undefined | nul
     .map(child => {
       let returned = child.text || ''
       if (child._type !== 'span') {
-        returned = `__inlineObject-${child._key}__`
+        returned = `<inlineObject key='${child._key}'/>`
+      } else if (child.marks) {
+        child.marks.forEach(mark => {
+          returned = `<mark type='${mark}'>${returned}</mark>`
+        })
       }
       return returned
     })
