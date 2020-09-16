@@ -1,13 +1,9 @@
 import classNames from 'classnames'
-import {MenuItemGroupType} from 'part:@sanity/components/menus/default'
 import {PortalProvider, usePortal} from 'part:@sanity/components/portal'
-import React, {createElement, useCallback, useMemo, useRef} from 'react'
+import React, {createElement, useCallback, useRef} from 'react'
 import {useDeskToolFeatures} from '../../../features'
-import {useDocumentHistory} from '../documentHistory'
-import {Doc, DocumentView} from '../types'
-import {DocumentHeaderTitle} from './header/title'
+import {useDocumentPane} from '../hooks'
 import {DocumentPanelHeader} from './header/header'
-import {getMenuItems} from './menuItems'
 import {FormView} from './views'
 
 import styles from './documentPanel.css'
@@ -18,59 +14,35 @@ import {
 } from './constants'
 
 interface DocumentPanelProps {
-  activeViewId: string
-  documentId: string
-  documentType: string
-  draft: Doc | null
-  idPrefix: string
-  initialFocusPath: any[]
-  initialValue: Doc
-  isClosable: boolean
-  isCollapsed: boolean
-  isHistoryOpen: boolean
-  isTimelineOpen: boolean
-  markers: any
-  menuItemGroups: MenuItemGroupType[]
-  onChange: (patches: any[]) => void
-  onCloseView: () => void
-  onCollapse?: () => void
-  onExpand?: () => void
-  onSetActiveView: (id: string | null) => void
-  onSplitPane: () => void
   onTimelineOpen: () => void
-  paneTitle?: string
-  published: Doc | null
   rootElement: HTMLDivElement | null
-  schemaType: any
-  timelineMode: 'rev' | 'since' | 'closed'
-  toggleInspect: (val: boolean) => void
-  value: any
   versionSelectRef: React.MutableRefObject<HTMLDivElement | null>
-  views: DocumentView[]
 }
 
 export function DocumentPanel(props: DocumentPanelProps) {
-  const {toggleInspect, isHistoryOpen, views, activeViewId} = props
-
+  const {
+    activeViewId,
+    displayed,
+    documentId,
+    draft,
+    historyController,
+    initialValue,
+    isCollapsed,
+    openHistory,
+    published,
+    schemaType,
+    toggleInspect,
+    value,
+    views
+  } = useDocumentPane()
+  const {onTimelineOpen, rootElement, versionSelectRef} = props
   const parentPortal = usePortal()
   const features = useDeskToolFeatures()
   const portalRef = useRef<HTMLDivElement | null>(null)
-  const {displayed, historyController, open: openHistory} = useDocumentHistory()
-  const formRef = useRef<any>()
+  // const formRef = useRef<any>()
   const activeView = views.find(view => view.id === activeViewId) || views[0] || {type: 'form'}
 
   const {revTime} = historyController
-
-  const menuItems = useMemo(() => {
-    return (
-      getMenuItems({
-        features,
-        isHistoryOpen: props.isHistoryOpen,
-        rev: revTime ? revTime.id : null,
-        value: props.value
-      }) || []
-    )
-  }, [features, props.isHistoryOpen, revTime, props.value])
 
   const handleContextMenuAction = useCallback(
     item => {
@@ -95,9 +67,10 @@ export function DocumentPanel(props: DocumentPanelProps) {
   )
 
   const scrollToFocusPath = useCallback((path: any) => {
-    if (formRef.current) {
-      formRef.current.scrollToFocusPath(path)
-    }
+    // @todo
+    // if (formRef.current) {
+    //   formRef.current.scrollToFocusPath(path)
+    // }
   }, [])
 
   // Use a local portal container when split panes is supported
@@ -114,39 +87,15 @@ export function DocumentPanel(props: DocumentPanelProps) {
   const margins = screenIsNarrow ? narrowScreenMargins : DEFAULT_MARGINS
 
   return (
-    <div className={classNames(styles.root, props.isCollapsed && styles.isCollapsed)}>
+    <div className={classNames(styles.root, isCollapsed && styles.isCollapsed)}>
       <div className={styles.headerContainer}>
         <DocumentPanelHeader
-          activeViewId={props.activeViewId}
-          idPrefix={props.idPrefix}
-          isClosable={props.isClosable}
-          isCollapsed={props.isCollapsed}
-          isTimelineOpen={props.isTimelineOpen}
-          markers={props.markers}
-          menuItemGroups={props.menuItemGroups}
-          menuItems={menuItems}
-          onCloseView={props.onCloseView}
-          onCollapse={props.onCollapse}
           onContextMenuAction={handleContextMenuAction}
-          onExpand={props.onExpand}
-          onSetActiveView={props.onSetActiveView}
-          onSplitPane={props.onSplitPane}
-          onTimelineOpen={props.onTimelineOpen}
-          rootElement={props.rootElement}
-          schemaType={props.schemaType}
+          onTimelineOpen={onTimelineOpen}
+          rootElement={rootElement}
           scrollToFocusPath={scrollToFocusPath}
-          timelineMode={props.timelineMode}
-          title={
-            <DocumentHeaderTitle
-              documentType={props.documentType}
-              paneTitle={props.paneTitle}
-              value={props.value}
-            />
-          }
-          versionSelectRef={props.versionSelectRef}
-          views={props.views}
+          versionSelectRef={versionSelectRef}
           rev={revTime}
-          isHistoryOpen={isHistoryOpen}
         />
       </div>
 
@@ -154,31 +103,20 @@ export function DocumentPanel(props: DocumentPanelProps) {
         <div className={styles.documentViewerContainer}>
           <div className={styles.documentScroller}>
             {activeView.type === 'form' && (
-              <FormView
-                id={props.documentId}
-                initialFocusPath={props.initialFocusPath}
-                initialValue={props.initialValue}
-                markers={props.markers}
-                onChange={props.onChange}
-                readOnly={revTime !== null}
-                ref={formRef}
-                schemaType={props.schemaType}
-                value={displayed}
-                margins={margins}
-              />
+              <FormView readOnly={revTime !== null} margins={margins} />
             )}
 
             {activeView.type === 'component' &&
               createElement(activeView.component, {
                 document: {
-                  draft: props.draft,
-                  displayed: displayed || props.value || props.initialValue,
+                  draft,
+                  displayed: displayed || value || initialValue,
                   historical: displayed,
-                  published: props.published
+                  published
                 },
-                documentId: props.documentId,
+                documentId,
                 options: activeView.options,
-                schemaType: props.schemaType
+                schemaType
               })}
           </div>
 

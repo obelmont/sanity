@@ -14,8 +14,6 @@ import {ActionStateDialog} from './actionStateDialog'
 const TOUCH_SUPPORT = 'ontouchstart' in document.documentElement
 
 interface Props {
-  id: string
-  type: string
   states: any[]
   disabled: boolean
   isMenuOpen: boolean

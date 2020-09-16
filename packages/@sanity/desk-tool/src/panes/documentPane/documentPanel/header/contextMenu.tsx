@@ -1,22 +1,26 @@
+import {negate} from 'lodash'
 import IconMoreVert from 'part:@sanity/base/more-vert-icon'
 import {MenuButton} from 'part:@sanity/components/menu-button'
-import Menu, {MenuItemType, MenuItemGroupType} from 'part:@sanity/components/menus/default'
+import Menu, {MenuItemType} from 'part:@sanity/components/menus/default'
 import React, {useCallback, useMemo} from 'react'
+import {useDocumentPane} from '../../hooks'
 
 import styles from './contextMenu.css'
 
 interface DocumentPanelContextMenuProps {
   boundaryElement: HTMLDivElement | null
-  isCollapsed: boolean
-  items: MenuItemType[]
-  itemGroups: MenuItemGroupType[]
   onAction: (action: MenuItemType) => void
   open: boolean
   setOpen: (val: boolean) => void
 }
 
+const isActionButton = (item: MenuItemType) => (item as any).showAsAction
+const isMenuButton = negate(isActionButton)
+
 export function DocumentPanelContextMenu(props: DocumentPanelContextMenuProps) {
-  const {boundaryElement, isCollapsed, open, items, itemGroups, onAction, setOpen} = props
+  const {boundaryElement, open, onAction, setOpen} = props
+  const {menuItems, menuItemGroups} = useDocumentPane()
+  const items = menuItems.filter(isMenuButton)
 
   const id = useMemo(
     () =>
@@ -57,7 +61,7 @@ export function DocumentPanelContextMenu(props: DocumentPanelContextMenuProps) {
         <Menu
           id={id}
           items={items}
-          groups={itemGroups}
+          groups={menuItemGroups}
           onAction={handleAction}
           onClose={handleCloseMenu}
         />

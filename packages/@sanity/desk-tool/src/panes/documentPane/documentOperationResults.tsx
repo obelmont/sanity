@@ -1,6 +1,7 @@
 import {useDocumentOperationEvent} from '@sanity/react-hooks'
 import Snackbar from 'part:@sanity/components/snackbar/default'
 import React from 'react'
+import {useDocumentPane} from './hooks'
 
 function getOpErrorTitle(op: string): string {
   if (op === 'delete') {
@@ -32,13 +33,9 @@ function getOpSuccessTitle(op: string): string {
 
 const IGNORE_OPS = ['patch', 'commit']
 
-type Props = {
-  id: string
-  type: string
-}
-
-export const DocumentOperationResults = React.memo((props: Props) => {
-  const event: any = useDocumentOperationEvent(props.id, props.type)
+export const DocumentOperationResults = React.memo(() => {
+  const {documentId, documentType} = useDocumentPane()
+  const event: any = useDocumentOperationEvent(documentId, documentType)
 
   if (!event) {
     return null

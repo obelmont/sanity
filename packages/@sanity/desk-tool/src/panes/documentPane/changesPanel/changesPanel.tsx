@@ -2,7 +2,6 @@
 import React, {useCallback} from 'react'
 import {
   ObjectDiff,
-  ObjectSchemaType,
   DocumentChangeContext,
   DiffAnnotationTooltipContent,
   ChangeList,
@@ -15,36 +14,29 @@ import {Tooltip} from 'part:@sanity/components/tooltip'
 import Button from 'part:@sanity/components/buttons/default'
 import {AvatarStack} from 'part:@sanity/components/avatar'
 import {useTimeAgo} from '@sanity/base/hooks'
+import {useDocumentPane} from '../hooks'
 import {formatTimelineEventLabel} from '../timeline'
-import {useDocumentHistory} from '../documentHistory'
+import {collectLatestAuthorAnnotations} from './helpers'
 
 import styles from './changesPanel.css'
-import {collectLatestAuthorAnnotations} from './helpers'
 
 interface ChangesPanelProps {
   changesSinceSelectRef: React.MutableRefObject<HTMLDivElement | null>
-  documentId: string
-  isTimelineOpen: boolean
   loading: boolean
   onTimelineOpen: () => void
-  schemaType: ObjectSchemaType
   since: Chunk | null
-  timelineMode: 'rev' | 'since' | 'closed'
 }
 
 export function ChangesPanel({
   changesSinceSelectRef,
-  documentId,
-  isTimelineOpen,
   loading,
   onTimelineOpen,
-  since,
-  schemaType,
-  timelineMode
+  since
 }: ChangesPanelProps): React.ReactElement | null {
-  const {close: closeHistory, historyController} = useDocumentHistory()
+  const {closeHistory, documentId, historyController, timelineMode, schemaType} = useDocumentPane()
   const diff: ObjectDiff | null = historyController.currentObjectDiff() as any
   const isComparingCurrent = !historyController.onOlderRevision()
+  const isTimelineOpen = timelineMode !== 'closed'
 
   const documentContext: DocumentChangeContextInstance = React.useMemo(
     () => ({

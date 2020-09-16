@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import {useDocumentPresence} from '@sanity/base/hooks'
+import schema from 'part:@sanity/base/schema'
 import {FormBuilder} from 'part:@sanity/form-builder'
 import documentStore from 'part:@sanity/base/datastore/document'
 import React, {FormEvent, useEffect, useMemo, useRef, memo} from 'react'
@@ -10,7 +11,6 @@ import {tap} from 'rxjs/operators'
 const preventDefault = (ev: FormEvent) => ev.preventDefault()
 
 type Doc = any
-type Schema = any
 type SchemaType = any
 
 interface Props {
@@ -25,18 +25,30 @@ interface Props {
   onChange: (event: any) => void
   onFocus: (focusPath: any[]) => void
   readOnly: boolean
-  schema: Schema
   type: SchemaType
 }
 
 export const EditForm = memo((props: Props) => {
-  const presence = useDocumentPresence(props.id)
+  const {
+    filterField,
+    focusPath,
+    id,
+    markers,
+    value,
+    onBlur,
+    onFocus,
+    onChange,
+    readOnly,
+    type
+  } = props
+
+  const presence = useDocumentPresence(id)
   const subscriptionRef = useRef<Subscription | null>(null)
   const patchChannel = useMemo(() => FormBuilder.createPatchChannel(), [])
 
   useEffect(() => {
     subscriptionRef.current = documentStore.pair
-      .documentEvents(props.id, props.type.name)
+      .documentEvents(id, type.name)
       .pipe(
         tap((event: any) => {
           patchChannel.receiveEvent(event)
@@ -50,20 +62,7 @@ export const EditForm = memo((props: Props) => {
         subscriptionRef.current = null
       }
     }
-  }, [])
-
-  const {
-    filterField,
-    focusPath,
-    markers,
-    value,
-    onBlur,
-    onFocus,
-    onChange,
-    readOnly,
-    schema,
-    type
-  } = props
+  }, [patchChannel, id, type.name])
 
   return (
     <form onSubmit={preventDefault}>

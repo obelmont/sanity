@@ -10,52 +10,77 @@ export interface DocumentView {
   type: string
   id: string
   title: string
-  options: {}
-  component: ComponentType<any>
-  icon?: ComponentType<any>
+  options: Record<string, unknown>
+  component: ComponentType<Record<string, unknown>>
+  icon?: ComponentType<Record<string, unknown>>
 }
 
+// @todo: import from elsewhere
 export interface Doc {
   _id?: string
   _type?: string
   _rev?: string
   _updatedAt?: string
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [key: string]: any
+  [key: string]: unknown
 }
 
-// export interface MenuAction {
-//   action: string
-//   icon?: React.FunctionComponent | React.Component
-//   isDisabled?: boolean
-//   title: React.ReactNode
-//   url?: string
-// }
+// @todo: import from elsewhere
+type KeyedSegment = {_key: string}
+type PathSegment = string | number | KeyedSegment
+export type Path = PathSegment[]
 
-// export interface MenuItemGroup {
-//   id: string
-// }
-
-export interface DocumentViewType {
+// @todo: import from elsewhere
+export interface Marker {
+  path: Path
   type: string
-  id: string
-  title: string
-  options: {}
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  component: React.ComponentType<any>
+  level?: string
+  item: {message: string}
 }
 
-export interface ObjectSchemaType {
-  name: string
-  jsonType: string
-  title?: string
-  fields: ObjectField[]
-  diffComponent?: ComponentType<any>
+// @todo: import from elsewhere
+export type JSONValue = number | string | boolean | {[key: string]: JSONValue} | JSONValue[]
+export type Origin = 'remote' | 'local' | 'internal'
+export type SetPatch = {
+  path: Path
+  type: 'set'
+  origin?: Origin
+  value: JSONValue
 }
-
-export interface ObjectField {
-  name: string
-  type: SchemaType
+export type IncPatch = {
+  path: Path
+  type: 'inc'
+  origin?: Origin
+  value: JSONValue
 }
-
-export type SchemaType = ObjectSchemaType
+export type DecPatch = {
+  path: Path
+  type: 'dec'
+  origin?: Origin
+  value: JSONValue
+}
+export type SetIfMissingPatch = {
+  path: Path
+  origin?: Origin
+  type: 'setIfMissing'
+  value: JSONValue
+}
+export type UnsetPatch = {
+  path: Path
+  origin?: Origin
+  type: 'unset'
+}
+export type InsertPosition = 'before' | 'after'
+export type InsertPatch = {
+  path: Path
+  origin?: Origin
+  type: 'insert'
+  position: InsertPosition
+  items: JSONValue[]
+}
+export type DiffMatchPatch = {
+  path: Path
+  type: 'diffMatchPatch'
+  origin?: Origin
+  value: string
+}
+export type Patch = SetPatch | SetIfMissingPatch | UnsetPatch | InsertPatch | DiffMatchPatch

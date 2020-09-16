@@ -1,4 +1,4 @@
-import React, {createRef, useRef, useEffect} from 'react'
+import React, {createRef} from 'react'
 
 export type Props = {
   padding?: number

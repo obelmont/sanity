@@ -1,14 +1,10 @@
-/* eslint-disable @typescript-eslint/explicit-function-return-type */
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable react/no-multi-comp */
-
 import React from 'react'
 import {RenderActionCollectionState} from 'part:@sanity/base/actions/utils'
 import {useEditState} from '@sanity/react-hooks'
 import resolveDocumentActions from 'part:@sanity/base/document-actions/resolver'
 import isHotkey from 'is-hotkey'
 import {ActionStateDialog} from '../statusBar'
+import {useDocumentPane} from '../hooks'
 
 interface ResponderProps extends React.ComponentProps<'div'> {
   states: any[]
@@ -51,7 +47,7 @@ function KeyboardShortcutResponder({
         onKeyDown(event)
       }
     },
-    [states]
+    [onActionStart, onKeyDown, states]
   )
   return (
     <div onKeyDown={handleKeyDown} tabIndex={-1} {...rest} ref={rootRef}>
@@ -62,18 +58,14 @@ function KeyboardShortcutResponder({
 }
 
 interface Props extends React.ComponentProps<'div'> {
-  id: string
-  type: string
   rootRef: React.MutableRefObject<HTMLDivElement | null>
 }
 
 export const DocumentActionShortcuts = React.memo((props: Props) => {
-  const {id, type, children, ...rest} = props
-
-  const editState = useEditState(props.id, props.type)
-
+  const {children, ...rest} = props
+  const {documentId, documentType} = useDocumentPane()
+  const editState = useEditState(documentId, documentType)
   const [activeIndex, setActiveIndex] = React.useState(-1)
-
   const onActionStart = React.useCallback(idx => {
     setActiveIndex(idx)
   }, [])

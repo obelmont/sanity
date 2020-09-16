@@ -1,15 +1,12 @@
-/* eslint-disable @typescript-eslint/explicit-function-return-type */
-/* eslint-disable react/no-multi-comp */
-/* eslint-disable react/no-array-index-key */
-
 import React from 'react'
 import Badge from 'part:@sanity/components/badges/default'
 import {RenderBadgeCollectionState} from 'part:@sanity/base/actions/utils'
-import styles from './documentStatusBarSparkline.css'
-import {useDocumentHistory} from '../documentHistory'
 import SyncIcon from 'part:@sanity/base/sync-icon'
 import {useSyncState} from '@sanity/react-hooks'
 import TimeAgo from '../../../components/TimeAgo'
+import {useDocumentPane} from '../hooks'
+
+import styles from './documentStatusBarSparkline.css'
 
 // TODO create icon
 const BadgeIcon = () => {
@@ -40,12 +37,14 @@ interface Props {
 }
 
 function DocumentStatusBarSparklineInner({states, disabled, lastUpdated}: Props) {
+  const {documentId} = useDocumentPane()
+  const lastState = states[states.length - 1]
+  const syncState = useSyncState(documentId)
+
   if (states.length === 0) {
     return null
   }
-  const {timeline} = useDocumentHistory()
-  const lastState = states[states.length - 1]
-  const syncState = timeline && useSyncState(timeline.publishedId)
+
   return (
     <div className={styles.root} data-disabled={disabled}>
       <div className={styles.statusBadges}>

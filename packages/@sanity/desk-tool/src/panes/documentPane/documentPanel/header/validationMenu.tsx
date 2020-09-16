@@ -2,18 +2,20 @@ import {MenuButton} from 'part:@sanity/components/menu-button'
 import ValidationList from 'part:@sanity/components/validation/list'
 import ErrorOutlineIcon from 'part:@sanity/base/error-outline-icon'
 import React, {useCallback} from 'react'
+import {useDocumentPane} from '../../hooks'
 
 interface ValidationMenuProps {
   boundaryElement: HTMLDivElement | null
   isOpen: boolean
-  markers: any[]
-  schemaType: any
+  // markers: any[]
+  // schemaType: any
   setFocusPath: (path: any) => void
   setOpen: (val: boolean) => void
 }
 
 export function ValidationMenu(props: ValidationMenuProps) {
-  const {boundaryElement, isOpen, markers, schemaType, setFocusPath, setOpen} = props
+  const {boundaryElement, isOpen, setFocusPath, setOpen} = props
+  const {markers, schemaType} = useDocumentPane()
   const validationMarkers = markers.filter(marker => marker.type === 'validation')
   const validationErrorMarkers = validationMarkers.filter(marker => marker.level === 'error')
   const validationWarningwarnings = validationMarkers.filter(marker => marker.level === 'warning')

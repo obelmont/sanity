@@ -3,7 +3,7 @@ import {useSyncState, useDocumentOperation, useValidationStatus} from '@sanity/r
 import CheckmarkIcon from 'part:@sanity/base/check-icon'
 import PublishIcon from 'part:@sanity/base/publish-icon'
 import TimeAgo from '../components/TimeAgo'
-import {useDocumentHistory} from '../panes/documentPane/documentHistory'
+import {useDocumentPane} from '../panes/documentPane/hooks'
 
 const DISABLED_REASON_TITLE = {
   LIVE_EDIT_ENABLED: 'Cannot publish since liveEdit is enabled for this document type',
@@ -26,21 +26,12 @@ function getDisabledReason(reason, publishedAt) {
 export function PublishAction(props) {
   const {id, type, liveEdit, draft, published} = props
 
-  if (liveEdit) {
-    return {
-      label: 'Publish',
-      title:
-        'Live Edit is enabled for this content type and publishing happens automatically as you make changes',
-      disabled: true
-    }
-  }
-
   const [publishState, setPublishState] = React.useState<'publishing' | 'published' | null>(null)
 
   const {publish}: any = useDocumentOperation(id, type)
   const validationStatus = useValidationStatus(id, type)
   const syncState = useSyncState(id)
-  const {open: historyOpen, historyController} = useDocumentHistory()
+  const {openHistory, historyController} = useDocumentPane()
 
   const hasValidationErrors = validationStatus.markers.some(marker => marker.level === 'error')
 
@@ -72,7 +63,7 @@ export function PublishAction(props) {
     if (didPublish) {
       if (historyController.changesPanelActive()) {
         // Re-open the panel
-        historyOpen()
+        openHistory()
       }
     }
     const nextState = didPublish ? 'published' : null
@@ -98,6 +89,15 @@ export function PublishAction(props) {
       doPublish()
     }
   }, [syncState.isSyncing, validationStatus.isValidating])
+
+  if (liveEdit) {
+    return {
+      label: 'Publish',
+      title:
+        'Live Edit is enabled for this content type and publishing happens automatically as you make changes',
+      disabled: true
+    }
+  }
 
   return {
     disabled,

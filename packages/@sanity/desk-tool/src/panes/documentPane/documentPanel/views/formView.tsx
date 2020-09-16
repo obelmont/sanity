@@ -1,120 +1,51 @@
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 
-import React from 'react'
-import {Subscription} from 'rxjs'
+import React, {useCallback, useEffect, useMemo, useState} from 'react'
+// import {Subscription} from 'rxjs'
 import {isActionEnabled} from 'part:@sanity/base/util/document-action-utils'
 import Button from 'part:@sanity/components/buttons/default'
-import schema from 'part:@sanity/base/schema'
 import afterEditorComponents from 'all:part:@sanity/desk-tool/after-editor-component'
 import filterFieldFn$ from 'part:@sanity/desk-tool/filter-fields-fn?'
 import {setLocation} from 'part:@sanity/base/datastore/presence'
 import {PresenceOverlay} from '@sanity/base/presence'
-import {Doc} from '../../types'
+// import {Doc} from '../../types'
+import {useDocumentPane} from '../../hooks'
 import {EditForm} from './editForm'
 
 import styles from './formView.css'
 
 interface Props {
-  id: string
   readOnly?: boolean
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  value: Doc | null
-  initialValue: Doc
-  isConnected: boolean
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  onChange: (patches: any[]) => void
-  schemaType: {name: string; title: string}
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  markers: Array<{path: any[]}>
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  initialFocusPath: unknown[] | null
+  // onChange: (patches: any[]) => void
   margins: Array<number>
 }
 
 const noop = () => undefined
 
 const INITIAL_STATE = {
-  focusPath: [] as unknown[],
+  focusPath: [] as any[],
   filterField: () => true
 }
 
-export class FormView extends React.PureComponent<Props> {
-  static defaultProps = {
-    markers: [],
-    isConnected: true
-  }
+export function FormView(props: Props) {
+  const {margins, readOnly} = props
+  const {connectionState, onChange} = useDocumentPane()
+  const isConnected = connectionState === 'connected'
 
-  state = INITIAL_STATE
+  const {
+    displayed,
+    documentId,
+    initialFocusPath,
+    initialValue,
+    markers,
+    schemaType
+  } = useDocumentPane()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  filterFieldFnSubscription: Subscription | null = null
+  const [state, setState] = useState<any>(INITIAL_STATE)
 
-  componentDidMount() {
-    const {initialFocusPath} = this.props
-
-    if (initialFocusPath) {
-      this.setState({focusPath: initialFocusPath})
-      this.reportFocusPath(initialFocusPath)
-    }
-
-    if (filterFieldFn$) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      this.filterFieldFnSubscription = filterFieldFn$.subscribe((filterField: any) =>
-        this.setState({filterField})
-      )
-    }
-  }
-
-  componentWillUnmount() {
-    if (this.filterFieldFnSubscription) {
-      this.filterFieldFnSubscription.unsubscribe()
-    }
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  handleFocus = (path: any[]) => {
-    this.setState({focusPath: path})
-    this.reportFocusPath(path)
-  }
-
-  scrollToFocusPath = (path: any[]) => {
-    const pathString = path[0]
-    const element = document.querySelector(`[data-focus-path="${pathString}"]`)
-
-    if (element) {
-      element.scrollIntoView({behavior: 'smooth', inline: 'center'})
-
-      // @todo: replace this with `element.focus({preventScroll: true})`
-      setTimeout(() => {
-        this.handleFocus(path)
-      }, 300)
-    } else {
-      this.handleFocus(path)
-    }
-  }
-
-  reportFocusPath(path) {
-    setLocation([
-      {
-        type: 'document',
-        documentId: this.props.id,
-        path,
-        lastActiveAt: new Date().toISOString()
-      }
-    ])
-  }
-
-  handleBlur = () => {
-    // do nothing
-  }
-
-  handleEditAsActualType = () => {
-    // TODO
-  }
-
-  isReadOnly() {
-    const {value, schemaType, isConnected, readOnly} = this.props
-    const isNonExistent = !value || !value._id
+  const isReadOnly = useMemo(() => {
+    const isNonExistent = !displayed || !displayed._id
 
     return (
       readOnly ||
@@ -122,50 +53,110 @@ export class FormView extends React.PureComponent<Props> {
       !isActionEnabled(schemaType, 'update') ||
       (isNonExistent && !isActionEnabled(schemaType, 'create'))
     )
-  }
+  }, [displayed, isConnected, readOnly, schemaType])
 
-  render() {
-    const {id, value, initialValue, markers, schemaType, margins} = this.props
-    const {focusPath, filterField} = this.state
-    const readOnly = this.isReadOnly()
-    const documentId = value && value._id && value._id.replace(/^drafts\./, '')
+  const hasTypeMismatch = displayed && displayed._type && displayed._type !== schemaType.name
 
-    const hasTypeMismatch = value && value._type && value._type !== schemaType.name
-    if (hasTypeMismatch) {
-      return (
-        <div className={styles.typeMisMatchMessage}>
-          This document is of type <code>{value!._type}</code> and cannot be edited as{' '}
-          <code>{schemaType.name}</code>
-          <div>
-            <Button onClick={this.handleEditAsActualType}>Edit as {value!._type} instead</Button>
-          </div>
-        </div>
-      )
+  const handleEditAsActualType = useCallback(() => {
+    // TODO
+  }, [])
+
+  const reportFocusPath = useCallback(
+    path => {
+      setLocation([
+        {
+          type: 'document',
+          documentId,
+          path,
+          lastActiveAt: new Date().toISOString()
+        }
+      ])
+    },
+    [documentId]
+  )
+
+  useEffect(() => {
+    if (initialFocusPath) {
+      setState({focusPath: initialFocusPath})
+      reportFocusPath(initialFocusPath)
     }
 
-    return (
-      <div className={styles.root}>
-        <PresenceOverlay margins={margins}>
-          <EditForm
-            id={id}
-            value={value || initialValue}
-            filterField={filterField}
-            focusPath={focusPath}
-            markers={markers}
-            onBlur={this.handleBlur}
-            onChange={readOnly ? noop : this.props.onChange}
-            onFocus={this.handleFocus}
-            readOnly={readOnly}
-            schema={schema}
-            type={schemaType}
-          />
-        </PresenceOverlay>
+    if (!filterFieldFn$) return undefined
 
-        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-        {afterEditorComponents.map((AfterEditorComponent: any, idx: number) => (
-          <AfterEditorComponent key={String(idx)} documentId={documentId} />
-        ))}
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const filterFieldFnSubscription = filterFieldFn$.subscribe((filterField: any) =>
+      setState({filterField})
+    )
+
+    return () => {
+      if (filterFieldFnSubscription) {
+        filterFieldFnSubscription.unsubscribe()
+      }
+    }
+  }, [initialFocusPath, reportFocusPath])
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleFocus = useCallback(
+    (path: any[]) => {
+      setState({focusPath: path})
+      reportFocusPath(path)
+    },
+    [reportFocusPath]
+  )
+
+  // const scrollToFocusPath = (path: any[]) => {
+  //   const pathString = path[0]
+  //   const element = document.querySelector(`[data-focus-path="${pathString}"]`)
+
+  //   if (element) {
+  //     element.scrollIntoView({behavior: 'smooth', inline: 'center'})
+
+  //     // @todo: replace this with `element.focus({preventScroll: true})`
+  //     setTimeout(() => {
+  //       handleFocus(path)
+  //     }, 300)
+  //   } else {
+  //     handleFocus(path)
+  //   }
+  // }
+
+  const handleBlur = useCallback(() => {
+    // do nothing
+  }, [])
+
+  if (hasTypeMismatch) {
+    return (
+      <div className={styles.typeMisMatchMessage}>
+        This document is of type <code>{displayed!._type}</code> and cannot be edited as{' '}
+        <code>{schemaType.name}</code>
+        <div>
+          <Button onClick={handleEditAsActualType}>Edit as {displayed!._type} instead</Button>
+        </div>
       </div>
     )
   }
+
+  return (
+    <div className={styles.root}>
+      <PresenceOverlay margins={margins}>
+        <EditForm
+          id={documentId}
+          value={displayed || initialValue}
+          filterField={state.filterField}
+          focusPath={state.focusPath}
+          markers={markers}
+          onBlur={handleBlur}
+          onChange={isReadOnly ? noop : onChange}
+          onFocus={handleFocus}
+          readOnly={isReadOnly}
+          type={schemaType}
+        />
+      </PresenceOverlay>
+
+      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+      {afterEditorComponents.map((AfterEditorComponent: any, idx: number) => (
+        <AfterEditorComponent key={String(idx)} documentId={documentId} />
+      ))}
+    </div>
+  )
 }

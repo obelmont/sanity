@@ -1,8 +1,3 @@
-/* eslint-disable @typescript-eslint/explicit-function-return-type */
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable react/jsx-handler-names */
-/* eslint-disable react/no-array-index-key */
-
 import Button from 'part:@sanity/components/buttons/default'
 import Hotkeys from 'part:@sanity/components/typography/hotkeys'
 import React from 'react'
@@ -16,6 +11,8 @@ import styles from './documentStatusBarActions.css'
 
 function getNext<T>(array: T[], fromIndex: number, dir = 1): T {
   const next = fromIndex + dir
+
+  // eslint-disable-next-line no-nested-ternary
   return array[next >= array.length ? 0 : next < 0 ? array.length - 1 : next]
 }
 
@@ -46,7 +43,7 @@ export function ActionMenu({actionStates, onOpen, onClose, disabled, isOpen}: Pr
 
   React.useEffect(() => {
     setActiveAction(actionStates.find(s => !s.disabled))
-  }, [isOpen])
+  }, [actionStates, isOpen])
 
   React.useEffect(() => {
     if (listRef.current) {
@@ -97,7 +94,7 @@ export function ActionMenu({actionStates, onOpen, onClose, disabled, isOpen}: Pr
               return (
                 <li key={idx} className={styles.menuItem} role="presentation">
                   <button
-                    {...(actionState === activeAction && {['data-has-focus']: true})}
+                    {...(actionState === activeAction && {'data-has-focus': true})}
                     aria-label={actionState.label}
                     className={styles.menuItemButton}
                     disabled={disabled || Boolean(actionState.disabled)}

@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/explicit-function-return-type */
-
 import * as React from 'react'
 import {useSyncState, useConnectionState} from '@sanity/react-hooks'
 import CheckIcon from 'part:@sanity/base/check-icon'
@@ -15,15 +13,15 @@ interface Props {
 export function SyncState(props: Props) {
   const {isSyncing} = useSyncState(props.id)
   const connectionState = useConnectionState(props.id, props.type)
-
   const isConnected = connectionState === 'connected'
-
   const icon = isSyncing || !isConnected ? <SyncIcon /> : <CheckIcon />
+
+  // eslint-disable-next-line no-nested-ternary
   const className = isSyncing
     ? styles.isSyncing
-    : !isConnected
-    ? styles.isDisconnected
-    : styles.statusIcon
+    : isConnected
+    ? styles.statusIcon
+    : styles.isDisconnected
 
   return <span className={className}>{icon}</span>
 }
