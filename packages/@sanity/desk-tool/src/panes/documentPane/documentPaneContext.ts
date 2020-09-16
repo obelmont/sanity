@@ -1,8 +1,8 @@
 import {Chunk, ObjectSchemaType} from '@sanity/field/diff'
 import {MenuItemType, MenuItemGroupType} from 'part:@sanity/components/menus/default'
 import {createContext} from 'react'
-import {Controller} from './documentHistory/history/controller'
-import {Timeline} from './documentHistory/history/timeline'
+import {Controller} from './history/controller'
+import {Timeline} from './history/timeline'
 import {Doc, DocumentView, Marker, Patch, Path} from './types'
 
 export interface IDocumentPaneContext {
