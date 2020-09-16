@@ -4,20 +4,15 @@ import ValidationListItem from './ValidationListItem'
 
 import styles from './ValidationList.css'
 
+type ObjectSchemaType = any
+
 type Props = {
   kind?: string
   onFocus?: (path: Path) => void
   onClose?: () => void
   showLink?: boolean
   truncate?: boolean
-  documentType?: {
-    fields: {
-      name: string
-      type: {
-        title: string
-      }
-    }[]
-  }
+  documentType?: ObjectSchemaType
   markers: Marker[]
 }
 
