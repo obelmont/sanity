@@ -28,3 +28,5 @@ export type ChildMap = Record<
   }
 >
 export type PortableTextDiff = ObjectDiff & {displayValue: PortableTextBlock}
+
+export type MarkSymbolMap = Record<string, string>

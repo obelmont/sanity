@@ -5,16 +5,11 @@ import {
   DIFF_EQUAL,
   DIFF_INSERT
 } from 'diff-match-patch'
-import {
-  StringDiffSegment,
-  StringDiff as StringDiffDiff,
-  StringInput,
-  DiffOptions
-} from '@sanity/diff'
 import {ArrayDiff, ObjectDiff, StringDiff} from '../../../diff'
 import {SchemaType, ObjectSchemaType} from '../../../types'
 import {
   ChildMap,
+  MarkSymbolMap,
   PortableTextBlock,
   PortableTextDiff,
   PortableTextChild,
@@ -24,6 +19,44 @@ import {
 const dmp = new DiffMatchPatch()
 
 export const UNKNOWN_TYPE_NAME = '_UNKOWN_TYPE_'
+
+export const MARK_SYMBOLS = [
+  '\uF000',
+  '\uF001',
+  '\uF002',
+  '\uF003',
+  '\uF004',
+  '\uF005',
+  '\uF006',
+  '\uF007',
+  '\uF008',
+  '\uF009',
+  '\uF00A',
+  '\uF00B',
+  '\uF00C',
+  '\uF00D',
+  '\uF00F',
+  '\uF010'
+]
+
+export const ANNOTATION_SYMBOLS = [
+  '\uF020',
+  '\uF021',
+  '\uF022',
+  '\uF023',
+  '\uF024',
+  '\uF025',
+  '\uF026',
+  '\uF027',
+  '\uF028',
+  '\uF029',
+  '\uF02A',
+  '\uF02B',
+  '\uF02C',
+  '\uF02D',
+  '\uF02E',
+  '\uF02F'
+]
 
 export function isPTSchemaType(schemaType: SchemaType): boolean {
   return schemaType.jsonType === 'object' && schemaType.name === 'block'
@@ -268,7 +301,11 @@ export function blockToText(block: PortableTextBlock | undefined | null): string
   return block.children.map(child => child.text || '').join('')
 }
 
-export function blockToSymbolizedText(block: PortableTextBlock | undefined | null): string {
+export function blockToSymbolizedText(
+  block: PortableTextBlock | undefined | null,
+  markMap: MarkSymbolMap,
+  annotationMap: MarkSymbolMap
+): string {
   if (!block) {
     return ''
   }
@@ -279,7 +316,12 @@ export function blockToSymbolizedText(block: PortableTextBlock | undefined | nul
         returned = `<inlineObject key='${child._key}'/>`
       } else if (child.marks) {
         child.marks.forEach(mark => {
-          returned = `<mark type='${mark}'>${returned}</mark>`
+          const _isDecorator = !!markMap[mark]
+          if (_isDecorator) {
+            returned = `<${markMap[mark]}>${returned}</${markMap[mark]}>`
+          } else if (annotationMap[mark]) {
+            returned = `<${annotationMap[mark]}>${returned}</${annotationMap[mark]}>`
+          }
         })
       }
       return returned
@@ -289,7 +331,8 @@ export function blockToSymbolizedText(block: PortableTextBlock | undefined | nul
 
 // eslint-disable-next-line complexity
 export function prepareDiffForPortableText(
-  diff: ObjectDiff
+  diff: ObjectDiff,
+  schemaType: ObjectSchemaType
 ): [PortableTextDiff, PortableTextDiff | undefined] {
   const _diff: PortableTextDiff = {
     ...diff,
@@ -299,47 +342,24 @@ export function prepareDiffForPortableText(
         : (diff.toValue as PortableTextBlock)
   }
 
-  // Add children that are removed to the display value (unless the whole block is removed)
-  if (_diff.action !== 'removed') {
-    const childrenDiff = _diff.fields.children as ArrayDiff
-    const newChildren = [...(_diff?.toValue?.children || [])] as PortableTextChild[]
-    const removedChildrenDiffs =
-      (childrenDiff &&
-        childrenDiff.items.filter(item => item.diff && item.diff.action === 'removed')) ||
-      []
-    removedChildrenDiffs.forEach(rDiff => {
-      if (rDiff.fromIndex !== undefined) {
-        const fromValue = rDiff.diff.fromValue as PortableTextChild
-        if (fromValue._key) {
-          newChildren.splice(rDiff.fromIndex, 0, fromValue)
-        }
-      }
-    })
-    _diff.displayValue = {..._diff.toValue, children: newChildren} as PortableTextBlock
-  }
-
-  // Special condition when the only change is adding marks (then just remove all the other diffs - like created new spans)
-  const onlyMarksAreChanged = didChangeMarksOnly(_diff)
-  if (onlyMarksAreChanged) {
-    const childrenItem = _diff.fields.children
-    if (childrenItem && childrenItem.type === 'array') {
-      childrenItem.items.forEach(item => {
-        if (item.diff.type === 'object') {
-          const itemDiff = item.diff as ObjectDiff
-          Object.keys(itemDiff.fields).forEach(key => {
-            if (key !== 'marks') {
-              delete itemDiff.fields[key]
-            }
-          })
-        }
+  if (_diff.fromValue && _diff.toValue) {
+    const annotationMap: MarkSymbolMap = {}
+    const markMap: MarkSymbolMap = {}
+    const spanSchemaType = getChildSchemaType(schemaType.fields, {_key: 'bogus', _type: 'span'})
+    if (spanSchemaType) {
+      getDecorators(spanSchemaType).forEach((dec, index) => {
+        markMap[dec.value] = MARK_SYMBOLS[index]
       })
     }
-    return [_diff, undefined]
-  }
-
-  if (_diff.fromValue && _diff.toValue) {
-    const fromText = blockToSymbolizedText(_diff.fromValue as PortableTextBlock)
-    const toText = blockToSymbolizedText(_diff.toValue as PortableTextBlock)
+    _diff.toValue.markDefs.forEach((markDef, index) => {
+      annotationMap[markDef._key] = ANNOTATION_SYMBOLS[index]
+    })
+    const fromText = blockToSymbolizedText(
+      _diff.fromValue as PortableTextBlock,
+      markMap,
+      annotationMap
+    )
+    const toText = blockToSymbolizedText(_diff.toValue as PortableTextBlock, markMap, annotationMap)
     const toBogusValue = {
       ..._diff.displayValue,
       children: [
@@ -389,7 +409,9 @@ export function prepareDiffForPortableText(
                     toValue: toText,
                     segments: buildSegments(fromText, toText).map(seg => ({
                       ...seg,
-                      annotation: _diff.annotation
+                      ...(_diff.action !== 'unchanged' && _diff.annotation
+                        ? {annotation: _diff.annotation} // Fallback
+                        : {})
                     }))
                   }
                 },

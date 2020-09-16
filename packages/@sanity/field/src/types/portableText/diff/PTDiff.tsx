@@ -14,7 +14,7 @@ export const PTDiff: DiffComponent<ObjectDiff> = function PTDiff({
   diff: ObjectDiff
   schemaType: ObjectSchemaType
 }) {
-  const [ptDiff, experimentalDiff] = prepareDiffForPortableText(diff)
+  const [ptDiff, experimentalDiff] = prepareDiffForPortableText(diff, schemaType)
   const childMap = useMemo(() => createChildMap(ptDiff, schemaType), [diff])
   const portableTextDiff = useMemo(() => <Block diff={ptDiff} childMap={childMap} />, [diff])
   let experimentalPortableTextDiff: any = null
@@ -32,10 +32,5 @@ export const PTDiff: DiffComponent<ObjectDiff> = function PTDiff({
     )
   }
   const classNames = [styles.root, styles[diff.action]].join(' ')
-  return (
-    <div className={classNames}>
-      {portableTextDiff}
-      {experimentalPortableTextDiff && <div>EXPERIMENTAL: {experimentalPortableTextDiff}</div>}
-    </div>
-  )
+  return <div className={classNames}>{experimentalPortableTextDiff}</div>
 }
