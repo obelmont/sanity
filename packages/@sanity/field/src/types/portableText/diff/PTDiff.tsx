@@ -32,5 +32,9 @@ export const PTDiff: DiffComponent<ObjectDiff> = function PTDiff({
     )
   }
   const classNames = [styles.root, styles[diff.action]].join(' ')
-  return <div className={classNames}>{experimentalPortableTextDiff}</div>
+  return (
+    <div className={classNames}>
+      {experimentalPortableTextDiff ? experimentalPortableTextDiff : portableTextDiff}
+    </div>
+  )
 }
