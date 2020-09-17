@@ -1,4 +1,4 @@
-import {startCase} from 'lodash'
+import {flatten, startCase, orderBy, last} from 'lodash'
 import {
   diff_match_patch as DiffMatchPatch,
   DIFF_DELETE,
@@ -6,13 +6,14 @@ import {
   DIFF_INSERT
 } from 'diff-match-patch'
 import {ArrayDiff, ObjectDiff, StringDiff} from '../../../diff'
-import {SchemaType, ObjectSchemaType} from '../../../types'
+import {ObjectSchemaType, SchemaType} from '../../../types'
 import {
   ChildMap,
   MarkSymbolMap,
   PortableTextBlock,
   PortableTextDiff,
   PortableTextChild,
+  StringSegment,
   SpanTypeSchema
 } from './types'
 
@@ -21,42 +22,52 @@ const dmp = new DiffMatchPatch()
 export const UNKNOWN_TYPE_NAME = '_UNKOWN_TYPE_'
 
 export const MARK_SYMBOLS = [
-  '\uF000',
-  '\uF001',
-  '\uF002',
-  '\uF003',
-  '\uF004',
-  '\uF005',
-  '\uF006',
-  '\uF007',
-  '\uF008',
-  '\uF009',
-  '\uF00A',
-  '\uF00B',
-  '\uF00C',
-  '\uF00D',
-  '\uF00F',
-  '\uF010'
+  // [startTag, endTag]
+  ['\uF000', '\uF001'],
+  ['\uF002', '\uF003'],
+  ['\uF004', '\uF005'],
+  ['\uF006', '\uF007'],
+  ['\uF008', '\uF009'],
+  ['\uF00A', '\uF00B'],
+  ['\uF00C', '\uF00D'],
+  ['\uF00F', '\uF010'],
+  ['\uF011', '\uF012'],
+  ['\uF013', '\uF014'],
+  ['\uF015', '\uF016'],
+  ['\uF017', '\uF018'],
+  ['\uF019', '\uF01A'],
+  ['\uF01B', '\uF01C'],
+  ['\uF01E', '\uF01F'],
+  ['\uF020', '\uF021']
 ]
 
 export const ANNOTATION_SYMBOLS = [
-  '\uF020',
-  '\uF021',
-  '\uF022',
-  '\uF023',
-  '\uF024',
-  '\uF025',
-  '\uF026',
-  '\uF027',
-  '\uF028',
-  '\uF029',
-  '\uF02A',
-  '\uF02B',
-  '\uF02C',
-  '\uF02D',
-  '\uF02E',
-  '\uF02F'
+  // [startTag, endTag]
+  ['\uF050', '\uF051'],
+  ['\uF052', '\uF053'],
+  ['\uF054', '\uF055'],
+  ['\uF056', '\uF057'],
+  ['\uF058', '\uF059'],
+  ['\uF05A', '\uF05B'],
+  ['\uF05C', '\uF05D'],
+  ['\uF05F', '\uF060'],
+  ['\uF061', '\uF062'],
+  ['\uF063', '\uF064'],
+  ['\uF065', '\uF066'],
+  ['\uF067', '\uF068'],
+  ['\uF069', '\uF06A'],
+  ['\uF06B', '\uF06C'],
+  ['\uF06E', '\uF06F'],
+  ['\uF070', '\uF071']
 ]
+
+const startMarkSymbols = MARK_SYMBOLS.map(set => set[0]).concat(
+  ANNOTATION_SYMBOLS.map(set => set[0])
+)
+const endMarkSymbols = MARK_SYMBOLS.map(set => set[1]).concat(ANNOTATION_SYMBOLS.map(set => set[1]))
+const allSymbols = startMarkSymbols.concat(endMarkSymbols)
+
+const markRegex = `/${allSymbols.join('|')}/g`
 
 export function isPTSchemaType(schemaType: SchemaType): boolean {
   return schemaType.jsonType === 'object' && schemaType.name === 'block'
@@ -251,7 +262,7 @@ export function diffDidRemove(blockDiff: ObjectDiff): boolean {
 
 export function getDecorators(spanSchemaType: SpanTypeSchema): {title: string; value: string}[] {
   if (spanSchemaType.decorators) {
-    return spanSchemaType.decorators
+    return orderBy(spanSchemaType.decorators, ['value'], ['asc'])
   }
   return []
 }
@@ -303,7 +314,7 @@ export function blockToText(block: PortableTextBlock | undefined | null): string
 
 export function blockToSymbolizedText(
   block: PortableTextBlock | undefined | null,
-  markMap: MarkSymbolMap,
+  decoratorMap: MarkSymbolMap,
   annotationMap: MarkSymbolMap
 ): string {
   if (!block) {
@@ -316,11 +327,11 @@ export function blockToSymbolizedText(
         returned = `<inlineObject key='${child._key}'/>`
       } else if (child.marks) {
         child.marks.forEach(mark => {
-          const _isDecorator = !!markMap[mark]
+          const _isDecorator = !!decoratorMap[mark]
           if (_isDecorator) {
-            returned = `<${markMap[mark]}>${returned}</${markMap[mark]}>`
+            returned = `${decoratorMap[mark][0]}${returned}${decoratorMap[mark][1]}`
           } else if (annotationMap[mark]) {
-            returned = `<${annotationMap[mark]}>${returned}</${annotationMap[mark]}>`
+            returned = `${annotationMap[mark][0]}${returned}${annotationMap[mark][1]}`
           }
         })
       }
@@ -360,34 +371,34 @@ export function prepareDiffForPortableText(
       annotationMap
     )
     const toText = blockToSymbolizedText(_diff.toValue as PortableTextBlock, markMap, annotationMap)
-    const toBogusValue = {
+    const toPseudoValue = {
       ..._diff.displayValue,
       children: [
         {
           _type: 'span',
-          _key: 'bogusSpanKey',
+          _key: 'pseudoSpanKey',
           text: toText,
           marks: []
         }
       ]
     }
-    const fromBogusValue = {
+    const fromPseudoValue = {
       ..._diff.displayValue,
       children: [
         {
           _type: 'span',
-          _key: 'bogusSpanKey',
+          _key: 'pseudoSpanKey',
           text: fromText,
           marks: []
         }
       ]
     }
-    const bogusDiff = {
+    const pseudoDiff = {
       action: 'changed',
       type: 'object',
-      displayValue: toBogusValue,
-      fromValue: fromBogusValue,
-      toValue: toBogusValue,
+      displayValue: toPseudoValue,
+      fromValue: fromPseudoValue,
+      toValue: toPseudoValue,
       isChanged: true,
       fields: {
         children: {
@@ -410,39 +421,31 @@ export function prepareDiffForPortableText(
                     segments: buildSegments(fromText, toText).map(seg => ({
                       ...seg,
                       ...(_diff.action !== 'unchanged' && _diff.annotation
-                        ? {annotation: _diff.annotation} // Fallback
+                        ? {annotation: _diff.annotation} // Fallback // TODO:; this is a no-no
                         : {})
                     }))
                   }
                 },
-                fromValue: fromBogusValue.children[0],
-                toValue: toBogusValue.children[0]
+                fromValue: fromPseudoValue.children[0],
+                toValue: toPseudoValue.children[0]
               },
               fromIndex: 0,
               toIndex: 0,
               hasMoved: false
             }
           ],
-          fromValue: fromBogusValue.children,
-          toValue: toBogusValue.children
+          fromValue: fromPseudoValue.children,
+          toValue: toPseudoValue.children
         }
       }
     }
-    return [_diff, bogusDiff as PortableTextDiff]
+    return [_diff, pseudoDiff as PortableTextDiff]
   }
   return [_diff as PortableTextDiff, undefined]
 }
 
-function buildSegments(
-  fromInput: string,
-  toInput: string
-): {type: string; action: string; text: string}[] {
-  const segments: {
-    type: string
-    action: string
-    text: string
-    child?: PortableTextChild
-  }[] = []
+function buildSegments(fromInput: string, toInput: string): StringSegment[] {
+  const segments: StringSegment[] = []
 
   const dmpDiffs = dmp.diff_main(fromInput, toInput)
   dmp.diff_cleanupEfficiency(dmpDiffs)
@@ -451,7 +454,6 @@ function buildSegments(
   let toIdx = 0
 
   for (const [op, text] of dmpDiffs) {
-    // eslint-disable-next-line default-case
     switch (op) {
       case DIFF_EQUAL:
         segments.push({
@@ -478,8 +480,37 @@ function buildSegments(
         })
         toIdx += text.length
         break
+      default:
+      // Do nothing
     }
   }
-
-  return segments
+  // Clean up so that marks / symbols are treated as an own segment
+  return flatten(
+    segments.map(seg => {
+      const newSegments: StringSegment[] = []
+      if (seg.text.length > 1) {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        // TODO: officially support string.matchAll or rewrite this!
+        const markMatches = [...seg.text.matchAll(markRegex)]
+        let lastIndex = -1
+        markMatches.forEach(match => {
+          if (match.index > lastIndex) {
+            newSegments.push({...seg, text: seg.text.substring(lastIndex + 1, match.index)})
+            newSegments.push({...seg, text: match[0]})
+          }
+          if (match === markMatches[markMatches.length - 1]) {
+            newSegments.push({...seg, text: seg.text.substring(match.index + 1)})
+          }
+          lastIndex = match.index
+        })
+        if (markMatches.length === 0) {
+          newSegments.push(seg)
+        }
+      } else {
+        newSegments.push(seg)
+      }
+      return newSegments
+    })
+  )
 }
