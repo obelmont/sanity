@@ -1,6 +1,6 @@
-import React from 'react'
 import {useDocumentOperation} from '@sanity/react-hooks'
 import ResetIcon from 'part:@sanity/base/reset-icon'
+import React, {useCallback} from 'react'
 
 const DISABLED_REASON_TITLE = {
   NO_CHANGES: 'This document has no unpublished changes',
@@ -10,6 +10,11 @@ const DISABLED_REASON_TITLE = {
 export function DiscardChangesAction({id, type, published, liveEdit, onComplete}) {
   const {discardChanges}: any = useDocumentOperation(id, type)
   const [isConfirmDialogOpen, setConfirmDialogOpen] = React.useState(false)
+
+  const handleConfirm = useCallback(() => {
+    discardChanges.execute()
+    onComplete()
+  }, [discardChanges, onComplete])
 
   if (!published || liveEdit) {
     return null
@@ -27,10 +32,7 @@ export function DiscardChangesAction({id, type, published, liveEdit, onComplete}
       type: 'confirm',
       color: 'danger',
       onCancel: onComplete,
-      onConfirm: () => {
-        discardChanges.execute()
-        onComplete()
-      },
+      onConfirm: handleConfirm,
       message: <>Are you sure you want to discard all changes since last published?</>
     }
   }
