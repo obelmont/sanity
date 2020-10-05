@@ -1,0 +1,43 @@
+@import 'part:@sanity/base/theme/variables-style';
+
+.debugModalRect {
+  fill: rgba(255, 0, 0, 0.25);
+}
+
+.path {
+  stroke: transparent;
+  pointer-events: none;
+  stroke-linecap: round;
+
+  @nest &.hovered {
+    stroke: var(--state-warning-color);
+  }
+
+  @nest &.focused {
+    stroke: var(--focus-color);
+  }
+
+  @nest &.revertHovered {
+    stroke: var(--state-danger-color);
+  }
+}
+
+.interactivePath {
+  pointer-events: stroke;
+  stroke: rgba(255, 255, 255, 0);
+  cursor: pointer;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+
+  @nest &.hovered:hover {
+    stroke: color(var(--state-warning-color) alpha(10%));
+  }
+
+  @nest &.focused:hover {
+    stroke: color(var(--focus-color) alpha(10%));
+  }
+
+  @nest &.revertHovered:hover {
+    stroke: color(var(--state-danger-color) alpha(10%));
+  }
+}

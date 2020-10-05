@@ -33,7 +33,13 @@ function EnabledChangeConnectorRoot({
   )
 }
 
-function DisabledChangeConnectorRoot({children, className}: Props) {
+function DisabledChangeConnectorRoot({
+  children,
+  className
+}: {
+  className?: string
+  children: React.ReactNode
+}) {
   return <ScrollContainer className={className}>{children}</ScrollContainer>
 }
 

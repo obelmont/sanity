@@ -1,8 +1,8 @@
-import isScrollContainer from './isScrollContainer'
+import {isScrollContainer} from './isScrollContainer'
 
 const SCROLL_INTO_VIEW_TOP_PADDING = -15
 
-const scrollIntoView = field => {
+export const scrollIntoView = field => {
   const element = field.element
 
   /*
@@ -28,11 +28,9 @@ const scrollIntoView = field => {
     top:
       parentElementWithScroll.scrollTop +
       field.rect.top -
-      field.rect.bounds.top +
+      field.bounds.top +
       SCROLL_INTO_VIEW_TOP_PADDING,
     left: 0,
     behavior: 'smooth'
   })
 }
-
-export default scrollIntoView

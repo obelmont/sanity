@@ -1,4 +1,4 @@
-import isScrollContainer from './isScrollContainer'
+import {isScrollContainer} from './isScrollContainer'
 
 const getOffsetsTo = (source: HTMLElement, target: HTMLElement) => {
   let el: HTMLElement | null = source
@@ -20,10 +20,13 @@ const getOffsetsTo = (source: HTMLElement, target: HTMLElement) => {
     if (isScrollContainer(el)) {
       bounds.top = el.offsetTop
       bounds.height = el.offsetHeight
+
       foundScrollContainer = true
     }
+
     top += el.offsetTop - el.scrollTop
     left += el.offsetLeft - el.scrollLeft
+
     el = el.offsetParent as HTMLElement
   }
 
