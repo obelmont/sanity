@@ -131,7 +131,7 @@ function InlineObjectWithDiff({
 
   return (
     <span {...restProps} className={className} onClick={handleOpenPopup} style={style}>
-      <Popover content={popoverContent} open={open} ref={setPopoverElement}>
+      <Popover content={popoverContent} open={open} portal ref={setPopoverElement}>
         <span className={styles.previewContainer}>
           <DiffTooltip annotations={annotations} description={`${diff.action} inline object`}>
             <span>
