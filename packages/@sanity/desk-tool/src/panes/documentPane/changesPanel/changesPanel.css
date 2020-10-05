@@ -75,9 +75,14 @@
 .body {
   flex: 1;
   min-height: 0;
-  padding: var(--large-padding) var(--medium-padding);
   overflow: auto;
   position: relative;
+}
+
+.scrollContainer {
+  height: 100%;
+  overflow: auto;
+  padding: var(--large-padding) var(--medium-padding);
 
   @media not screen and (prefers-reduced-motion) {
     scroll-behavior: smooth;

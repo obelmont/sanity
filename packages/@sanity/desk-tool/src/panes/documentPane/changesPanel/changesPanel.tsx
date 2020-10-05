@@ -14,9 +14,10 @@ import CloseIcon from 'part:@sanity/base/close-icon'
 import {UserAvatar} from '@sanity/base/components'
 import Button from 'part:@sanity/components/buttons/default'
 import {AvatarStack} from 'part:@sanity/components/avatar'
+import {PortalProvider} from 'part:@sanity/components/portal'
 import {ScrollContainer} from 'part:@sanity/components/scroll'
 import {TooltipProvider} from 'part:@sanity/components/tooltip'
-import React, {useCallback, useRef} from 'react'
+import React, {useCallback, useRef, useState} from 'react'
 import {DropdownButton} from '../../../components/DropdownButton'
 import {useDocumentHistory} from '../documentHistory'
 import {formatTimelineEventLabel} from '../timeline'
@@ -47,6 +48,7 @@ export function ChangesPanel({
   timelineMode
 }: ChangesPanelProps): React.ReactElement | null {
   const scrollRef = useRef<HTMLElement | null>(null)
+  const [portalElement, setPortalElement] = useState<HTMLDivElement | null>(null)
   const {close: closeHistory, historyController} = useDocumentHistory()
   const diff: ObjectDiff | null = historyController.currentObjectDiff()
   const isComparingCurrent = !historyController.onOlderRevision()
@@ -133,16 +135,23 @@ export function ChangesPanel({
           )}
         </div>
       </header>
-      <TooltipProvider boundaryElement={scrollRef.current}>
-        <ScrollContainer className={styles.body} ref={scrollRef}>
-          <Content
-            diff={diff}
-            documentContext={documentContext}
-            loading={loading}
-            schemaType={schemaType}
-          />
-        </ScrollContainer>
-      </TooltipProvider>
+
+      <div className={styles.body}>
+        <PortalProvider element={portalElement}>
+          <TooltipProvider boundaryElement={portalElement}>
+            <ScrollContainer className={styles.scrollContainer} ref={scrollRef}>
+              <Content
+                diff={diff}
+                documentContext={documentContext}
+                loading={loading}
+                schemaType={schemaType}
+              />
+            </ScrollContainer>
+          </TooltipProvider>
+        </PortalProvider>
+
+        <div data-portal="" ref={setPortalElement} />
+      </div>
     </div>
   )
 }
