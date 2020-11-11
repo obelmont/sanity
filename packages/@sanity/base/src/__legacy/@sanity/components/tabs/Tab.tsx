@@ -20,7 +20,7 @@ interface State {
 // @todo: refactor to functional component
 export default class Tab extends React.PureComponent<TabProps, State> {
   element: HTMLButtonElement | null = null
-  focusTimeout?: number
+  focusTimeout?: NodeJS.Timer
 
   constructor(props: TabProps) {
     super(props)

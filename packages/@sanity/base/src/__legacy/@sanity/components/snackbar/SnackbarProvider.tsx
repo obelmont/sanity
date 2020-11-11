@@ -30,7 +30,7 @@ export default class SnackbarProvider extends React.Component<SnackbarProviderPr
   maxStack = 3
   snackQueue: SnackbarItemType[] = []
 
-  _removeTimer?: number
+  _removeTimer?: NodeJS.Timer
 
   get offsets() {
     const {activeSnacks} = this.state
